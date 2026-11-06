@@ -18,6 +18,10 @@
           "builder": "@angular/build:application",
           "options": {
             "browser": "src/main.ts",
+            "outputPath": {
+              "base": "dist/houston-em",
+              "browser": ""
+            },
             "tsConfig": "tsconfig.app.json",
             "assets": [
               {
