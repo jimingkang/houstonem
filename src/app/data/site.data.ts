@@ -357,5 +357,6 @@ export const NAV = [
   { label: 'Micro FT-IR', link: '/micro-ftir' },
   { label: 'Services', link: '/services' },
   { label: 'Galleries', link: '/galleries' },
+  { label: 'Shop', link: '/shop' },
   { label: 'Contact', link: '/contact' },
 ] as const;

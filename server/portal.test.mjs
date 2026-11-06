@@ -1,0 +1,43 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { openDatabase, addCustomer } from './db.mjs';
+import { createPortalServer } from './index.mjs';
+import { seedTestCustomer } from './seed-test.mjs';
+test('customer sessions isolate subscriptions, reports and downloads', async () => {
+  const dir=mkdtempSync(join(tmpdir(),'hem-test-')); const db=openDatabase(dir);
+  const a=addCustomer(db,'a@example.com','Correct-password-123','Alice','A Company');
+  const b=addCustomer(db,'b@example.com','Correct-password-456','Bob','B Company');
+  db.prepare('INSERT INTO subscriptions(customer_id,service,plan,status) VALUES(?,?,?,?)').run(a,'SEM / EDS','Monthly','Active');
+  const insert=db.prepare('INSERT INTO reports(customer_id,title,sample_id,analysis,status,filename,mime,content) VALUES(?,?,?,?,?,?,?,?)');
+  const own=insert.run(a,'Alice report','A-001','SEM','Ready','a.pdf','application/pdf',Buffer.from('%PDF-test')).lastInsertRowid;
+  const other=insert.run(b,'Bob report','B-001','FTIR','Ready','b.pdf','application/pdf',Buffer.from('%PDF-private')).lastInsertRowid;
+  const server=createPortalServer(db); await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const base=`http://127.0.0.1:${server.address().port}`;
+  const login=(password,origin)=>fetch(base+'/api/login',{method:'POST',headers:{'Content-Type':'application/json',...(origin?{Origin:origin}:{})},body:JSON.stringify({email:'a@example.com',password})});
+  try {
+    seedTestCustomer(db); seedTestCustomer(db);
+    const testLogin=await fetch(base+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:'test',password:'test'})});
+    assert.equal(testLogin.status,200);
+    const testPortal=await (await fetch(base+'/api/portal',{headers:{Cookie:testLogin.headers.get('set-cookie').split(';')[0]}})).json();
+    assert.equal(testPortal.customer.name,'Test Customer');
+    assert.equal((await fetch(base+'/api/portal')).status,401);
+    assert.equal((await fetch(base+`/api/reports/${own}/download`)).status,401);
+    assert.equal((await login('wrong')).status,401);
+    assert.equal((await login('Correct-password-123','https://evil.example')).status,403);
+    const signed=await login('Correct-password-123');assert.equal(signed.status,200);
+    const cookie=signed.headers.get('set-cookie').split(';')[0];assert.match(signed.headers.get('set-cookie'),/HttpOnly; SameSite=Strict/);
+    const headers={Cookie:cookie};const portal=await (await fetch(base+'/api/portal',{headers})).json();
+    assert.equal(portal.customer.name,'Alice');assert.equal(portal.subscriptions.length,1);assert.equal(portal.reports.length,1);assert.equal(portal.reports[0].title,'Alice report');assert.equal(portal.customer.password_hash,undefined);
+    const download=await fetch(base+`/api/reports/${own}/download`,{headers});assert.equal(download.status,200);assert.equal(await download.text(),'%PDF-test');
+    assert.equal((await fetch(base+`/api/reports/${other}/download`,{headers})).status,404);
+    assert.equal((await fetch(base+'/api/logout',{method:'POST',headers:{...headers,'Content-Type':'application/json'},body:'{}'})).status,200);
+    assert.equal((await fetch(base+'/api/portal',{headers})).status,401);
+    const second=await login('Correct-password-123');const expired=second.headers.get('set-cookie').split(';')[0];db.prepare('UPDATE sessions SET expires=0').run();
+    assert.equal((await fetch(base+'/api/portal',{headers:{Cookie:expired}})).status,401);
+    for(let i=0;i<10;i++)await login('wrong');assert.equal((await login('wrong')).status,429);
+  } finally { await new Promise(resolve=>server.close(resolve));db.close(); }
+  const persisted=openDatabase(dir);assert.equal(persisted.prepare('SELECT count(*) as n FROM customers').get().n,3);persisted.close();rmSync(dir,{recursive:true});
+});

@@ -25,7 +25,9 @@
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.css"]
+            "styles": [
+              "src/styles.css"
+            ]
           },
           "configurations": {
             "production": {
@@ -56,7 +58,8 @@
           "options": {
             "host": "0.0.0.0",
             "port": 3000,
-            "allowedHosts": true
+            "allowedHosts": true,
+            "proxyConfig": "proxy.conf.json"
           },
           "configurations": {
             "production": {

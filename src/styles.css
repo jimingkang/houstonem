@@ -1,10 +1,10 @@
 :root {
-  --background: #f4f0e9;
-  --surface: #fffdf8;
-  --ink: #172329;
-  --primary: #b6532d;
-  --accent: #e7b84a;
-  --deep: #182e35;
+  --background: #fafbf8;
+  --surface: #ffffff;
+  --ink: #173e35;
+  --primary: #225c49;
+  --accent: #9db492;
+  --deep: #123e35;
 
   --muted: color-mix(in srgb, var(--ink) 66%, var(--background));
   --line: color-mix(in srgb, var(--ink) 14%, transparent);
@@ -16,8 +16,8 @@
   --font-display: 'Space Grotesk', var(--font-sans);
   --font-mono: 'DM Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
 
-  --radius: 0.75rem;
-  --container: 80rem;
+  --radius: 0.2rem;
+  --container: 78rem;
   --shadow: 0 18px 45px rgba(23, 35, 41, 0.09);
 }
 

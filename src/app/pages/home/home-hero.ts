@@ -1,162 +1,32 @@
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { CONTACT, IMAGES } from '../../data/site.data';
-import { SemFrame } from '../../shared/sem-frame';
 
 @Component({
   selector: 'app-home-hero',
-  imports: [RouterLink, SemFrame],
+  imports: [RouterLink],
   template: `
     <section class="hero">
-      <div class="container inner">
+      <div class="container hero-grid">
         <div class="copy">
-          <span class="eyebrow">Industrial forensics laboratory · Houston, TX</span>
-          <h1>Scanning Electron Microscopy &amp; Element Analysis</h1>
-          <p class="lead">
-            Materials analysis for metals, alloys, composites, chemicals, polymers, and beyond. SEM/EDS with
-            real-time ColorSEM element mapping and micro FT-IR — reported in language any audience understands.
-          </p>
-          <div class="actions">
-            <a class="btn btn-primary" [href]="contact.phoneHref">Free consultation</a>
-            <a class="btn btn-outline" routerLink="/services">Explore services</a>
-          </div>
-          <dl class="facts">
-            <div>
-              <dt class="mono">Turnaround</dt>
-              <dd>Same or next day</dd>
-            </div>
-            <div>
-              <dt class="mono">Viewing</dt>
-              <dd>Live remote sessions</dd>
-            </div>
-            <div>
-              <dt class="mono">Experience</dt>
-              <dd>40+ years metallurgy</dd>
-            </div>
-          </dl>
+          <span class="eyebrow">HOUSTON, TEXAS · MATERIALS ANALYSIS LABORATORY</span>
+          <h1>Small details.<br>Definitive <em>answers.</em></h1>
+          <p>See beyond the surface. Expert electron microscopy and materials analysis that turn complex questions into clear, actionable insight.</p>
+          <div class="actions"><a class="btn btn-primary" routerLink="/contact">Discuss your project <span>↗</span></a><a class="explore" routerLink="/services">Explore our capabilities <span>→</span></a></div>
+          <div class="expert"><span class="expert-icon">✳</span><div>Real science. A real conversation.<small>Free consultation with our Ph.D. expert.</small></div></div>
         </div>
-
         <div class="visual">
-          <app-sem-frame
-            [image]="hero"
-            ratio="5 / 4"
-            [priority]="true"
-            sizes="(min-width: 1024px) 50vw, 100vw"
-          />
-          <p class="caption">
-            <span class="mono">ALWAYS-ON X-RAY MAPPING</span>
-            Real-time element mapping reveals what might otherwise be missed — and focuses the analysis on the
-            elements of interest.
-          </p>
+          <img src="/images/hero-colorsem.png" alt="ColorSEM micrograph revealing the elemental composition of a material" fetchpriority="high">
+          <span class="image-label"><i></i> A CLOSER LOOK CHANGES EVERYTHING</span>
+          <div class="image-caption"><span>SEM / EDS<br><b>Clarity at the micron level.</b></span><a routerLink="/sem-edx" aria-label="Explore SEM and EDS analysis">↗</a></div>
+          <span class="crosshair top">+</span><span class="crosshair bottom">+</span>
         </div>
       </div>
+      <div class="container hero-bottom"><span>PRECISION IN EVERY PARTICLE. CONFIDENCE IN EVERY DECISION.</span><a href="#capabilities">Discover what we do ↓</a></div>
     </section>
   `,
   styles: `
-    .hero {
-      position: relative;
-      overflow: hidden;
-      background: var(--background);
-      border-bottom: 1px solid var(--line);
-    }
-    .hero::after {
-      content: '';
-      position: absolute;
-      right: -12rem;
-      bottom: -14rem;
-      width: 34rem;
-      height: 34rem;
-      border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
-      border-radius: 50%;
-      box-shadow: 0 0 0 3rem color-mix(in srgb, var(--primary) 4%, transparent), 0 0 0 7rem color-mix(in srgb, var(--primary) 3%, transparent);
-      pointer-events: none;
-    }
-    .inner {
-      position: relative;
-      z-index: 1;
-      display: grid;
-      gap: 3rem;
-      padding-block: 3rem 4rem;
-    }
-    @media (min-width: 1024px) {
-      .inner {
-        grid-template-columns: 1fr 1.05fr;
-        align-items: center;
-        gap: 4rem;
-        padding-block: 5rem 5.5rem;
-      }
-    }
-    .copy {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 1.5rem;
-
-    }
-    h1 {
-      max-width: 10ch;
-      font-size: clamp(2.75rem, 6vw, 5.25rem);
-      font-weight: 700;
-      letter-spacing: -0.025em;
-    }
-    .actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-    }
-    .facts {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 1rem;
-      width: 100%;
-      margin: 1rem 0 0;
-      padding-top: 1.5rem;
-      border-top: 1px solid var(--line);
-    }
-    .facts div {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-    dt {
-      font-size: 0.6875rem;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--muted);
-    }
-    dd {
-      margin: 0;
-      font-weight: 600;
-      font-size: 0.9375rem;
-      line-height: 1.3;
-    }
-    .visual {
-      display: flex;
-      flex-direction: column;
-      gap: 0.875rem;
-
-    }
-    .caption {
-      font-size: 0.875rem;
-      color: var(--muted);
-      max-width: 52ch;
-    }
-    .caption .mono {
-      display: block;
-      font-size: 0.6875rem;
-      letter-spacing: 0.08em;
-      color: var(--primary);
-      margin-bottom: 0.25rem;
-    }
-    @keyframes rise {
-      from {
-        opacity: 0;
-        transform: translateY(12px);
-      }
-    }
+    .hero{background:#edf3f0;overflow:hidden}.hero-grid{display:grid;grid-template-columns:1.04fr 1fr;gap:4rem;padding-top:64px;padding-bottom:55px;align-items:center}.copy>.eyebrow{font-size:10px;letter-spacing:.12em}h1{font-size:clamp(48px,5.7vw,80px);line-height:1.06;letter-spacing:-.065em;margin:25px 0;font-weight:500}h1 em{font-style:normal;color:var(--primary)}.copy>p{max-width:460px;color:var(--muted);font-size:17px;line-height:1.8}.actions{display:flex;align-items:center;flex-wrap:wrap;gap:25px;margin-top:30px}.actions .btn{gap:30px}.explore{font-size:13px;font-weight:600;text-decoration:none}.explore span{margin-left:10px}.expert{display:flex;align-items:center;gap:13px;border-top:1px solid var(--line);margin-top:40px;padding-top:23px;font-size:12px;font-weight:600;max-width:440px}.expert small{display:block;font-size:11px;color:var(--muted);font-weight:400;margin-top:2px}.expert-icon{font-size:32px;color:var(--primary)}.visual{position:relative;height:490px;background:#172d2a;overflow:hidden;border-radius:3px}.visual>img{width:100%;height:100%;object-fit:cover}.visual:after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.18),transparent 45%,rgba(0,20,18,.8));pointer-events:none}.image-label{position:absolute;z-index:1;top:25px;left:25px;color:white;font:9px var(--font-mono);letter-spacing:.09em;background:#18312acc;padding:9px 12px}.image-label i{display:inline-block;width:5px;height:5px;border-radius:50%;background:#b3d4ab;margin-right:7px}.image-caption{position:absolute;z-index:1;bottom:27px;left:28px;right:28px;display:flex;align-items:end;justify-content:space-between;color:white;font:10px var(--font-mono);letter-spacing:.1em}.image-caption b{font:500 22px var(--font-sans);letter-spacing:-.03em;display:block;margin-top:8px}.image-caption a{display:grid;place-items:center;width:42px;height:42px;border:1px solid #ffffff70;border-radius:50%;font-size:24px;text-decoration:none}.crosshair{position:absolute;z-index:1;color:#ffffffb0;font:25px monospace}.top{right:15px;top:12px}.bottom{left:12px;bottom:9px}.hero-bottom{border-top:1px solid var(--line);display:flex;justify-content:space-between;padding-block:18px;font:9px var(--font-mono);letter-spacing:.09em;color:var(--muted)}.hero-bottom a{text-decoration:none;color:var(--ink)}
+    @media(max-width:850px){.hero-grid{grid-template-columns:1fr;gap:30px;padding-top:40px}.visual{height:400px}.hero-bottom>span{max-width:55%}h1{font-size:60px}}@media(max-width:450px){h1{font-size:49px}.visual{height:330px}.actions{gap:20px}.hero-bottom{font-size:8px;gap:15px}.image-label{font-size:8px}}
   `,
 })
-export class HomeHero {
-  protected readonly contact = CONTACT;
-  protected readonly hero = IMAGES.hero;
-}
+export class HomeHero {}

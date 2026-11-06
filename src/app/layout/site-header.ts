@@ -11,7 +11,7 @@ import { BrandMark } from '../shared/brand-mark';
   template: `
     <div class="utility">
       <div class="container utility-inner">
-        <span class="mono">Free consultation with our Ph.D. expert</span>
+        <span class="mono">Independent expertise. Microscopic precision.</span>
         <div class="utility-links">
           <a [href]="contact.phoneHref">{{ contact.phone }}</a>
           <a [href]="'mailto:' + contact.email">{{ contact.email }}</a>
@@ -54,12 +54,14 @@ import { BrandMark } from '../shared/brand-mark';
               </li>
             }
           </ul>
-          <a class="btn btn-primary nav-cta" [href]="contact.phoneHref">Call the lab</a>
+          <a class="portal-link" routerLink="/portal" routerLinkActive="active">Client Portal ↗</a>
+          <a class="btn btn-primary nav-cta" [href]="contact.phoneHref">Let’s talk <span aria-hidden="true">↗</span></a>
         </nav>
       </div>
     </header>
   `,
   styles: `
+    .portal-link { font-size: 12px; font-weight: 600; text-decoration: none; white-space: nowrap; }
     .utility {
       background: var(--ink);
       color: color-mix(in srgb, var(--on-ink) 78%, var(--ink));
@@ -111,7 +113,7 @@ import { BrandMark } from '../shared/brand-mark';
       align-items: center;
       justify-content: space-between;
       gap: 1.5rem;
-      min-height: 4.25rem;
+      min-height: 5.5rem;
     }
     .brand {
       display: flex;
@@ -127,6 +129,7 @@ import { BrandMark } from '../shared/brand-mark';
     .brand-text strong {
       font-size: 0.9375rem;
       font-weight: 600;
+      max-width: 210px;
     }
     .brand-text .mono {
       font-size: 0.6875rem;
@@ -198,7 +201,7 @@ import { BrandMark } from '../shared/brand-mark';
       color: var(--primary);
     }
 
-    @media (min-width: 1024px) {
+    @media (min-width: 1200px) {
       .menu-toggle {
         display: none;
       }
@@ -208,7 +211,7 @@ import { BrandMark } from '../shared/brand-mark';
         display: flex;
         flex-direction: row;
         align-items: center;
-        gap: 1.5rem;
+        gap: 1rem;
         padding: 0;
         background: none;
         border: 0;
@@ -219,9 +222,9 @@ import { BrandMark } from '../shared/brand-mark';
       }
       .nav ul a {
         position: relative;
-        padding: 0.5rem 0.625rem;
+        padding: 0.5rem 0.4rem;
         border: 0;
-        font-size: 0.9375rem;
+        font-size: 0.8125rem;
         color: var(--muted);
       }
       .nav ul a:hover {

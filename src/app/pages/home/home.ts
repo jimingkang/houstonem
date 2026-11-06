@@ -1,128 +1,33 @@
 import { Component } from '@angular/core';
-import { ANALYSES, MATERIALS } from '../../data/site.data';
-import { TileGrid } from '../../shared/tile-grid';
-import { CtaBand } from '../../shared/cta-band';
+import { RouterLink } from '@angular/router';
 import { HomeHero } from './home-hero';
-import { HomeTechniques } from './home-techniques';
-import { HomeSpecialties } from './home-specialties';
 
 @Component({
   selector: 'app-home-page',
-  imports: [HomeHero, HomeTechniques, HomeSpecialties, TileGrid, CtaBand],
+  imports: [HomeHero, RouterLink],
   template: `
     <app-home-hero />
-
-    <section class="signal-strip" aria-label="Laboratory capabilities">
-      <div class="container signal-inner">
-        <span><b>01</b> Same-day turnaround</span>
-        <span><b>02</b> Live remote viewing</span>
-        <span><b>03</b> Ph.D. interpretation</span>
-        <span><b>04</b> Houston, Texas</span>
-      </div>
-    </section>
-
-    <section class="section" aria-labelledby="materials-title">
-      <div class="container">
-        <div class="head">
-          <div>
-            <span class="eyebrow">What we examine</span>
-            <h2 id="materials-title">Organic and inorganic materials at the micron level</h2>
-          </div>
-          <p>
-            We provide materials analysis to manufacturing facilities, laboratories, consultants, engineers and
-            researchers.
-          </p>
-        </div>
-        <app-tile-grid [tiles]="materials" />
-      </div>
-    </section>
-
-    <section class="section analyses" aria-labelledby="analyses-title">
-      <div class="container">
-        <div class="head">
-          <div>
-            <span class="eyebrow">How we find answers</span>
-            <h2 id="analyses-title">Types of analysis</h2>
-          </div>
-          <p>
-            From fractography to deposit chemistry — each analysis combines imaging with elemental or molecular
-            identification.
-          </p>
-        </div>
-        <app-tile-grid [tiles]="analyses" />
-      </div>
-    </section>
-
-    <app-home-specialties />
-    <app-home-techniques />
-    <app-cta-band />
+    <section class="proof"><div class="container proof-grid"><div><strong>40+</strong><span>Years of metallurgy<br>& materials expertise</span></div><div><strong>24–48h</strong><span>Same or next day service<br>available in most cases</span></div><div><strong>Live</strong><span>Remote SEM viewing<br>from wherever you work</span></div><div><strong>Ph.D.</strong><span>Expert-led analysis<br>and clear interpretation</span></div></div></section>
+    <section class="section capabilities" id="capabilities"><div class="container">
+      <div class="section-head"><div><span class="eyebrow">OUR CAPABILITIES</span><h2>The right tools.<br>The answers you need.</h2></div><div><p>From an unexpected failure to an unknown particle, we find the story your material is telling.</p><a class="text-link" routerLink="/services">View all services <span>↗</span></a></div></div>
+      <div class="service-grid">@for (service of services; track service.title) {<a class="service-card" [routerLink]="service.link"><div class="service-image"><img [src]="service.image" [alt]="service.alt" loading="lazy"><span>{{service.tag}}</span></div><div class="service-copy"><h3>{{service.title}} <span>↗</span></h3><p>{{service.description}}</p></div></a>}</div>
+    </div></section>
+    <section class="section approach"><div class="container approach-grid"><div class="lab-image"><img src="/images/lab.png" alt="Electron microscopy laboratory workstation" loading="lazy"><span>YOUR MATERIALS. OUR FULL ATTENTION.</span></div><div><span class="eyebrow">MORE THAN A LAB REPORT</span><h2>Expertise you can<br>put to work.</h2><p>We work alongside engineers, manufacturers, researchers, and consultants to connect microscopic evidence with the bigger picture.</p><div class="steps"><div><span>01</span><div><h3>Tell us what you need to know</h3><p>Talk directly with an expert about your material and your question.</p></div></div><div><span>02</span><div><h3>See the science as it happens</h3><p>Send your sample and join a live remote viewing session.</p></div></div><div><span>03</span><div><h3>Move forward with clarity</h3><p>Get meaningful findings, explained in language your team understands.</p></div></div></div><a class="text-link" routerLink="/about">Get to know our laboratory ↗</a></div></div></section>
+    <section class="client-section section"><div class="container client-grid"><div><span class="eyebrow">CONNECTED TO YOUR LABORATORY</span><h2>Your analysis.<br>Always within reach.</h2><p>A dedicated client workspace for the services you rely on and the findings that move your work forward.</p><a class="btn btn-primary" routerLink="/portal">Access Client Portal <span>↗</span></a></div><div class="portal-preview"><div class="preview-bar"><span>HEM / CLIENT WORKSPACE</span><span>PRIVATE ACCESS</span></div><h3>A clear view of your laboratory work.</h3><div class="preview-row"><span class="preview-icon">01</span><div><strong>Subscribed services</strong><p>Your current analysis services, plans, and renewal dates.</p></div></div><div class="preview-row"><span class="preview-icon">02</span><div><strong>Analysis report library</strong><p>Find reports by sample and securely download your files.</p></div></div><div class="preview-row"><span class="preview-icon">03</span><div><strong>Your team, connected</strong><p>Direct access to laboratory support for your next question.</p></div></div><a routerLink="/portal">Sign in to your workspace →</a></div></div></section>
+    <section class="shop-promo"><div class="container"><div><span class="eyebrow">LABORATORY ACCESSORIES</span><h2>Prepare for your next discovery.</h2><p>Browse sample mounting, collection and handling essentials.</p></div><a class="btn btn-outline" routerLink="/shop">Explore the shop ↗</a></div></section>
+    <section class="contact-band"><div class="container"><div><span class="eyebrow">LET’S TAKE A CLOSER LOOK</span><h2>Every answer starts<br>with a good question.</h2><p>Tell us about your materials challenge. We’ll help you find the next step.</p></div><a class="btn btn-primary" routerLink="/contact">Talk to an expert <span>↗</span></a></div></section>
   `,
   styles: `
-    .signal-strip {
-      background: var(--deep);
-      color: #f7f3ea;
-      border-bottom: 1px solid rgba(255,255,255,0.12);
-    }
-    .signal-inner {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 0;
-    }
-    .signal-inner span {
-      display: flex;
-      align-items: center;
-      gap: 0.65rem;
-      min-height: 3.25rem;
-      border-right: 1px solid rgba(255,255,255,0.12);
-      font-size: 0.75rem;
-      letter-spacing: 0.01em;
-    }
-    .signal-inner span:nth-child(even) { padding-left: 1rem; border-right: 0; }
-    .signal-inner b {
-      color: var(--accent);
-      font: 0.6875rem var(--font-mono);
-    }
-    @media (min-width: 768px) {
-      .signal-inner { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-      .signal-inner span { padding-left: 1.25rem; }
-      .signal-inner span:nth-child(even) { padding-left: 1.25rem; border-right: 1px solid rgba(255,255,255,0.12); }
-      .signal-inner span:first-child { padding-left: 0; }
-      .signal-inner span:last-child { border-right: 0; }
-    }
-    .analyses {
-      padding-top: 0;
-      background: var(--surface);
-    }
-    .head {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      margin-bottom: 2rem;
-    }
-    .head > div {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-    @media (min-width: 900px) {
-      .head {
-        flex-direction: row;
-        align-items: flex-end;
-        justify-content: space-between;
-        gap: 3rem;
-      }
-    }
-    h2 {
-      font-size: clamp(1.5rem, 3vw, 2.125rem);
-      max-width: 24ch;
-    }
-    .head p {
-      max-width: 40ch;
-      color: var(--muted);
-    }
+    .shop-promo{padding:45px 0;background:#edf3ef;border-top:1px solid var(--line)}.shop-promo>.container{display:flex;justify-content:space-between;align-items:center;gap:25px}.shop-promo h2{font-size:29px;font-weight:500;margin:12px 0}.shop-promo p{font-size:13px;color:var(--muted)}.shop-promo .btn{font-size:12px;white-space:nowrap}@media(max-width:600px){.shop-promo>.container{align-items:start;flex-direction:column}}
+    .client-section{background:#fafbf8}.client-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center}.client-grid h2{font-size:44px;font-weight:500;margin:18px 0}.client-grid>div>p{max-width:410px;color:var(--muted);font-size:15px;line-height:1.8;margin-bottom:28px}.client-grid .btn{gap:35px}.portal-preview{border:1px solid #cbd7d0;background:white;padding:28px;box-shadow:12px 12px 0 #e9efea}.preview-bar{display:flex;justify-content:space-between;font:9px var(--font-mono);color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:18px}.portal-preview h3{font-size:20px;margin:24px 0}.preview-row{display:flex;gap:18px;padding:18px 0;border-bottom:1px solid var(--line)}.preview-icon{font:11px var(--font-mono);color:var(--primary);padding-top:3px}.preview-row strong{font-size:13px;font-weight:500}.preview-row p{font-size:12px;color:var(--muted);margin-top:5px}.portal-preview>a{display:block;font-size:12px;margin-top:22px;text-decoration:none;font-weight:600}@media(max-width:700px){.client-grid{grid-template-columns:1fr;gap:30px}.client-grid h2{font-size:35px}}
+    .proof{background:#fff;border-bottom:1px solid var(--line)}.proof-grid{display:grid;grid-template-columns:repeat(4,1fr);padding-block:30px}.proof-grid>div{display:flex;align-items:center;gap:18px;border-right:1px solid var(--line);padding-left:28px}.proof-grid>div:first-child{padding-left:0}.proof-grid>div:last-child{border:0}.proof strong{font-size:30px;letter-spacing:-.05em;font-weight:500;color:var(--primary)}.proof span{font-size:11px;line-height:1.6;color:var(--muted)}.section-head{display:flex;justify-content:space-between;align-items:end;margin-bottom:34px;gap:30px}.section-head h2,.approach h2{font-size:42px;font-weight:500;letter-spacing:-.05em;margin-top:15px}.section-head>div:last-child{max-width:350px}.section-head p,.approach p{color:var(--muted);font-size:14px;line-height:1.8}.section-head .text-link{margin-top:16px;font-size:12px;gap:25px}.service-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:23px}.service-card{text-decoration:none;border:1px solid var(--line);background:#fff;transition:transform .2s}.service-card:hover{transform:translateY(-5px)}.service-image{height:220px;position:relative;overflow:hidden}.service-image img{height:100%;width:100%;object-fit:cover;transition:transform .4s}.service-card:hover img{transform:scale(1.04)}.service-image>span{position:absolute;left:16px;top:16px;background:#ffffffec;padding:5px 9px;font:9px var(--font-mono);letter-spacing:.05em}.service-copy{padding:23px}.service-copy h3{font-size:19px;letter-spacing:-.03em;display:flex;justify-content:space-between;font-weight:500}.service-copy h3 span{color:var(--primary)}.service-copy p{font-size:12px;color:var(--muted);margin-top:12px;line-height:1.8}.approach{background:#edf3f0}.approach-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center}.lab-image{position:relative}.lab-image img{width:100%;height:500px;object-fit:cover}.lab-image>span{position:absolute;bottom:20px;left:20px;font:9px var(--font-mono);padding:10px;background:white}.approach h2{margin-bottom:20px}.steps{margin:24px 0}.steps>div{display:flex;gap:20px;padding:16px 0;border-top:1px solid var(--line)}.steps>div>span{font:11px var(--font-mono);color:var(--primary);padding-top:2px}.steps h3{font-size:14px;letter-spacing:-.01em}.steps p{font-size:12px;margin-top:6px}.approach .text-link{font-size:12px}.contact-band{background:#123e35;color:white;padding:65px 0}.contact-band>.container{display:flex;align-items:center;justify-content:space-between;gap:30px}.contact-band .eyebrow{color:#bbd3bd}.contact-band h2{font-size:43px;font-weight:500;margin:15px 0}.contact-band p{color:#c1d0ca;font-size:14px}.contact-band .btn{background:#d8e5c8;color:#173d33;gap:45px}
+    @media(max-width:1000px){.proof-grid>div{padding-left:15px;gap:10px;flex-direction:column;align-items:start}.approach-grid{gap:35px}.service-image{height:175px}}@media(max-width:700px){.proof-grid{grid-template-columns:1fr 1fr;gap:25px}.proof-grid>div{padding-left:0;border:0}.section-head{display:block}.section-head>div:last-child{margin-top:25px}.service-grid,.approach-grid{grid-template-columns:1fr}.service-image{height:250px}.lab-image img{height:350px}.contact-band>.container{align-items:start;flex-direction:column}.section-head h2,.approach h2,.contact-band h2{font-size:35px}}
   `,
 })
 export class HomePage {
-  protected readonly materials = MATERIALS;
-  protected readonly analyses = ANALYSES;
+  protected readonly services = [
+    { title: 'SEM / EDS Analysis', tag: 'IMAGING + ELEMENTAL ANALYSIS', image: '/images/metals.png', alt: 'Microscopic detail of a metal fracture surface', description: 'Reveal surface structure and elemental composition with high-resolution imaging and real-time mapping.', link: '/sem-edx' },
+    { title: 'Failure & Corrosion Analysis', tag: 'ROOT CAUSE INVESTIGATION', image: '/images/failure.png', alt: 'Microscopic crack in a failed material', description: 'Understand what went wrong, why it happened, and what the evidence means for your next decision.', link: '/services/failure-analysis' },
+    { title: 'Micro FT-IR Analysis', tag: 'MOLECULAR IDENTIFICATION', image: '/images/polymers.png', alt: 'Microscopic polymer fibers', description: 'Identify polymers, organic compounds, and unknown contaminants through their chemical fingerprint.', link: '/micro-ftir' },
+  ];
 }
