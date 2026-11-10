@@ -20,6 +20,10 @@ import { BrandMark } from '../shared/brand-mark';
             <a [href]="contact.phoneHref">{{ contact.phone }}</a><br />
             <a [href]="'mailto:' + contact.email">{{ contact.email }}</a>
           </address>
+          <div class="footer-cta">
+            <a class="btn btn-light" routerLink="/contact">Request a quote</a>
+            <a class="btn btn-ghost" routerLink="/portal">Client portal ↗</a>
+          </div>
         </div>
 
         <nav aria-label="Site">
@@ -87,6 +91,31 @@ import { BrandMark } from '../shared/brand-mark';
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
+    }
+    .footer-cta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.625rem;
+      margin-top: 0.75rem;
+    }
+    .footer-cta .btn {
+      min-height: 2.5rem;
+      font-size: 0.8125rem;
+      text-decoration: none;
+    }
+    .btn-light {
+      background: var(--accent);
+      color: var(--ink);
+    }
+    .btn-light:hover {
+      background: color-mix(in srgb, var(--accent) 80%, white);
+    }
+    .btn-ghost {
+      border-color: color-mix(in srgb, var(--on-ink) 30%, transparent);
+      color: var(--on-ink);
+    }
+    .btn-ghost:hover {
+      border-color: var(--on-ink);
     }
     address {
       font-style: normal;

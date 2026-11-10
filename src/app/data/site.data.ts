@@ -360,3 +360,113 @@ export const NAV = [
   { label: 'Shop', link: '/shop' },
   { label: 'Contact', link: '/contact' },
 ] as const;
+
+export interface Industry {
+  title: string;
+  summary: string;
+  link: string;
+}
+
+/** Industries / problem areas, modeled on a "how we could serve you" solutions grid. */
+export const INDUSTRIES: Industry[] = [
+  { title: 'Oil & gas tools', summary: 'PDC cutters, downhole components and drilling-tool failures.', link: '/services/pdc-analysis' },
+  { title: 'Petrochemical & refining', summary: 'Pitting, crevice and under-deposit corrosion in process equipment.', link: '/services/corrosion' },
+  { title: 'Heavy equipment & fabrication', summary: 'Fractography, weld evaluation and heat-treat verification.', link: '/services/failure-analysis' },
+  { title: 'Coatings & surface finishing', summary: 'Layer thickness, porosity, pinholes and interface oxides.', link: '/services/coatings' },
+  { title: 'Plastics & polymers', summary: 'Identify polymers, fillers and organic contaminants.', link: '/micro-ftir' },
+  { title: 'Lubricants & fluids', summary: 'Wear debris and particles filtered from oil and liquid samples.', link: '/services/contamination' },
+  { title: 'Geology & energy research', summary: 'Shale texture, organic matter and microporosity in core samples.', link: '/services/core-samples' },
+  { title: 'Powders & advanced materials', summary: 'Particle size, morphology, phases and inclusions.', link: '/services/particle-analysis' },
+];
+
+export interface ProcessStep {
+  title: string;
+  text: string;
+}
+
+export const PROCESS_STEPS: ProcessStep[] = [
+  { title: 'Describe your question', text: 'Call or send a short description of the material and what you need to find out.' },
+  { title: 'Free expert consultation', text: 'Our Ph.D. scientist recommends the right technique and gives you a quote.' },
+  { title: 'Ship or drop off the sample', text: 'We confirm sample size and preparation needs before anything is shipped.' },
+  { title: 'Watch the analysis live', text: 'Join the SEM/EDS session remotely over Teams or Zoom, or let us run it for you.' },
+  { title: 'Receive a clear report', text: 'Images, spectra, maps and interpretation, delivered through the client portal.' },
+  { title: 'Follow-up support', text: 'Talk through the findings with the analyst and plan any next steps.' },
+];
+
+export interface Faq {
+  q: string;
+  a: string;
+}
+
+export const FAQS: Faq[] = [
+  {
+    q: 'How fast can I get results?',
+    a: 'Same day or next day service is available in most cases. Tell us your deadline when you request a quote and we will confirm the timeline before you ship.',
+  },
+  {
+    q: 'Do non-conductive samples need to be gold coated?',
+    a: 'Usually not. Our SEM runs in Low Vacuum mode, so most plastics, ceramics and geological samples can be imaged as received. Gold sputtering is available at no extra charge when it helps.',
+  },
+  {
+    q: 'Can I watch the analysis?',
+    a: 'Yes. You can join a live remote session over Microsoft Teams or Zoom and direct the analysis as if you were in the lab.',
+  },
+  {
+    q: 'When should I choose SEM/EDS versus micro FT-IR?',
+    a: 'SEM/EDS reveals morphology and elemental (inorganic) composition. Micro FT-IR identifies organic compounds such as polymers and residues. If you are unsure, describe the sample and we will recommend one or both.',
+  },
+  {
+    q: 'Can you analyze liquids and oils?',
+    a: 'Yes. Liquid samples are filtered and dried, then the retained particles are imaged and analyzed for chemical composition.',
+  },
+  {
+    q: 'Are there operator or engineer fees?',
+    a: 'No. Pricing is for the analysis itself, with no separate “operator” or “engineer” fees.',
+  },
+];
+
+/** Typical sample types and questions per service, used on service detail pages. */
+export const SERVICE_EXTRAS: Record<string, { samples: string[]; questions: string[] }> = {
+  sem: {
+    samples: ['Metals and alloys', 'Polymers and fibers', 'Ceramics and powders', 'Geological samples'],
+    questions: ['What does this surface look like at high magnification?', 'How large are these features or particles?'],
+  },
+  eds: {
+    samples: ['Inclusions and particles', 'Deposits and scale', 'Coatings and platings', 'Unknown residues'],
+    questions: ['Which elements are present?', 'How are elements distributed across the sample?'],
+  },
+  'failure-analysis': {
+    samples: ['Fractured components', 'Fasteners and shafts', 'Welds', 'Non-metallic parts'],
+    questions: ['Was it fatigue, overload or corrosion?', 'Where did the failure initiate?'],
+  },
+  corrosion: {
+    samples: ['Pipe and tubing sections', 'Pitted surfaces', 'Corrosion products', 'Coupons'],
+    questions: ['What caused the corrosion?', 'Did corrosion cause the part to fail?'],
+  },
+  coatings: {
+    samples: ['Coatings on metals', 'Coatings on plastics', 'Platings', 'Multi-layer systems'],
+    questions: ['How thick is each layer?', 'Why did the coating delaminate?'],
+  },
+};
+
+export interface SearchEntry {
+  label: string;
+  hint: string;
+  link: string;
+  keywords: string;
+}
+
+export const SEARCH_INDEX: SearchEntry[] = [
+  { label: 'SEM/EDX analysis', hint: 'Technique', link: '/sem-edx', keywords: 'sem eds edx colorsem chemisem electron microscope elemental mapping' },
+  { label: 'Micro FT-IR analysis', hint: 'Technique', link: '/micro-ftir', keywords: 'ftir ft-ir infrared organic polymer spectroscopy' },
+  ...SERVICES.map((s) => ({
+    label: s.title,
+    hint: 'Service · ' + s.short,
+    link: '/services/' + s.slug,
+    keywords: [s.short, s.summary, ...s.highlights].join(' ').toLowerCase(),
+  })),
+  { label: 'Galleries', hint: 'Page', link: '/galleries', keywords: 'images micrographs fracture insects sea water egg shell' },
+  { label: 'Laboratory shop', hint: 'Page', link: '/shop', keywords: 'stubs tabs vials tweezers accessories buy' },
+  { label: 'Client portal', hint: 'Page', link: '/portal', keywords: 'login sign in reports account' },
+  { label: 'Request a quote', hint: 'Contact', link: '/contact', keywords: 'contact price quote offer phone email address' },
+];

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, computed, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { SERVICES } from '../../data/site.data';
 import { PageHeader } from '../../shared/page-header';
@@ -17,8 +17,16 @@ import { CtaBand } from '../../shared/cta-band';
 
     <section class="section">
       <div class="container">
+        <div class="filter-bar">
+          <label class="filter">
+            <span class="sr-only">Filter services</span>
+            <svg aria-hidden="true" viewBox="0 0 20 20" width="16" height="16"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="1.8" /><path d="m13 13 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
+            <input type="search" placeholder="Filter by technique, material or problem…" [value]="query()" (input)="query.set($any($event.target).value)" />
+          </label>
+          <span class="mono count" role="status">{{ filtered().length }} of {{ services.length }} analyses</span>
+        </div>
         <ul class="list">
-          @for (s of services; track s.slug) {
+          @for (s of filtered(); track s.slug) {
             <li>
               <a [routerLink]="['/services', s.slug]" class="row">
                 <span class="mono code">{{ s.short }}</span>
@@ -28,6 +36,11 @@ import { CtaBand } from '../../shared/cta-band';
                 </span>
                 <span class="arrow" aria-hidden="true">→</span>
               </a>
+            </li>
+          } @empty {
+            <li class="empty">
+              No listed service matches “{{ query() }}”. We analyze far more than we list —
+              <a routerLink="/contact" [queryParams]="{ need: query() }">ask our expert</a>.
             </li>
           }
         </ul>
@@ -66,6 +79,52 @@ import { CtaBand } from '../../shared/cta-band';
     <app-cta-band />
   `,
   styles: `
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .filter {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex: 1 1 22rem;
+      max-width: 32rem;
+      min-height: 2.875rem;
+      padding: 0 1rem;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+    }
+    .filter:focus-within {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .filter input {
+      flex: 1;
+      min-width: 0;
+      border: 0;
+      background: none;
+      outline: none;
+      font: 400 0.9375rem/1.4 var(--font-sans);
+      color: var(--ink);
+    }
+    .count {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+    .empty {
+      grid-column: 1 / -1;
+      padding: 2rem 0;
+      color: var(--muted);
+    }
+    .empty a {
+      color: var(--primary);
+    }
     .list {
       display: grid;
       margin: 0;
@@ -136,6 +195,14 @@ import { CtaBand } from '../../shared/cta-band';
 })
 export class ServicesPage {
   protected readonly services = SERVICES;
+  protected readonly query = signal('');
+  protected readonly filtered = computed(() => {
+    const terms = this.query().trim().toLowerCase().split(/\s+/).filter(Boolean);
+    return SERVICES.filter((s) => {
+      const hay = [s.title, s.short, s.summary, ...s.highlights].join(' ').toLowerCase();
+      return terms.every((t) => hay.includes(t));
+    });
+  });
   protected readonly applications = [
     'Failure analysis of metals',
     'Failure analysis of non-metals',
