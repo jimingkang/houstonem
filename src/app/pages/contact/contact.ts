@@ -1,5 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
+import { ActivatedRoute } from '@angular/router';
+import { SERVICE_PRICING, formatUsd, quoteSampleCount } from '../../data/service-pricing';
 import { ReactiveFormsModule, NonNullableFormBuilder, Validators } from '@angular/forms';
 import { CONTACT, SERVICES } from '../../data/site.data';
 import { PageHeader } from '../../shared/page-header';
@@ -51,13 +53,17 @@ import { PageHeader } from '../../shared/page-header';
 
           <label class="field">
             <span>Service of interest</span>
-            <select formControlName="service">
+            <select #serviceSelect formControlName="service" (change)="selectedService.set(serviceSelect.value)">
               <option value="">Not sure yet</option>
               @for (s of services; track s.slug) {
                 <option [value]="s.title">{{ s.title }}</option>
               }
             </select>
           </label>
+
+          @if (estimateText(); as estimate) {
+            <p class="muted estimate-note" role="status">{{ estimate }} Final pricing is subject to laboratory review.</p>
+          }
 
           <label class="field">
             <span>Tell us about your sample</span>
@@ -232,6 +238,10 @@ export class ContactPage {
   protected readonly contact = CONTACT;
   protected readonly services = SERVICES;
   protected readonly sent = signal(false);
+  private readonly route = inject(ActivatedRoute);
+  private readonly quotedService = SERVICES.find(service => service.slug === this.route.snapshot.queryParamMap.get('service'));
+  private readonly requestedSamples = quoteSampleCount(this.route.snapshot.queryParamMap.get('samples'));
+  protected readonly selectedService = signal(this.quotedService?.title ?? '');
   protected readonly mapUrl = inject(DomSanitizer).bypassSecurityTrustResourceUrl(
     `https://maps.google.com/maps?q=${encodeURIComponent(CONTACT.mapQuery)}&z=15&output=embed`,
   );
@@ -241,9 +251,18 @@ export class ContactPage {
     company: [''],
     email: ['', [Validators.required, Validators.email]],
     phone: [''],
-    service: [''],
+    service: [this.selectedService()],
     message: ['', [Validators.required, Validators.minLength(10)]],
   });
+
+  protected estimateText(): string | null {
+    if (!this.quotedService || this.quotedService.title !== this.selectedService()) return null;
+    const price = SERVICE_PRICING[this.quotedService.slug];
+    if (price.startingUsd === null) return null;
+    const quantity = price.unit === 'sample' ? this.requestedSamples : 1;
+    const scope = price.unit === 'sample' ? `${quantity} ${quantity === 1 ? 'sample' : 'samples'}` : '1 project';
+    return `Illustrative starting estimate for ${scope}: ${formatUsd(price.startingUsd * quantity)} USD.`;
+  }
 
   protected invalid(name: 'name' | 'email' | 'message'): boolean {
     const control = this.form.controls[name];
@@ -263,6 +282,7 @@ export class ContactPage {
       `Email: ${v.email}`,
       v.phone ? `Phone: ${v.phone}` : null,
       v.service ? `Service: ${v.service}` : null,
+      this.estimateText(),
       '',
       v.message,
     ]
