@@ -3,7 +3,7 @@ import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify, parseEnv } from 'node:util';
 import { existsSync, readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { openDatabase } from './db.mjs';
+import { addCustomer, openDatabase } from './db.mjs';
 import { seedTestCustomer } from './seed-test.mjs';
 import { createChatHandler } from './chat.mjs';
 import { customerOrders } from './orders.mjs';
@@ -15,6 +15,14 @@ export function createPortalServer(db = openDatabase(), options = {}) {
   const chat = createChatHandler(options.chat);
   const site = options.staticDir ? createStaticHandler(options.staticDir) : null;
   const attempts = new Map();
+  const guestAttempts = new Map();
+  const sessionCookie = (res, customerId, seconds) => {
+    const session = randomBytes(32).toString('hex');
+    db.prepare('DELETE FROM sessions WHERE expires<=?').run(Date.now());
+    db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(hash(session), customerId, Date.now() + seconds * 1000);
+    res.setHeader('Set-Cookie', `hem_session=${session}; HttpOnly; SameSite=Strict; Path=/api; Max-Age=${seconds}${process.env.NODE_ENV==='production'?'; Secure':''}`);
+  };
+  const asCustomer = user => ({ ...user, guest: /^guest-[a-f0-9]{32}@guest\.invalid$/.test(user.email) });
   const dummySalt = randomBytes(16).toString('hex');
   return createServer(async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
@@ -32,6 +40,27 @@ export function createPortalServer(db = openDatabase(), options = {}) {
       }
       const token = /(?:^|;\s*)hem_session=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie || '')?.[1];
       const user = token && db.prepare('SELECT c.id,c.email,c.name,c.company FROM sessions s JOIN customers c ON c.id=s.customer_id WHERE s.token_hash=? AND s.expires>?').get(hash(token),Date.now());
+      if (path === '/api/guest-session' && req.method === 'POST') {
+        if (user) return json(200, { customer: asCustomer(user) });
+        const now = Date.now();
+        for (const [key, limit] of guestAttempts) if (limit.until <= now) guestAttempts.delete(key);
+        const ip = req.socket.remoteAddress;
+        const limit = guestAttempts.get(ip) || { count: 0, until: now + 900000 };
+        if (limit.count >= 20 || (!guestAttempts.has(ip) && guestAttempts.size >= 4096)) {
+          return json(429, { error: 'Too many guest sessions. Please try again later or sign in.' });
+        }
+        limit.count++;
+        guestAttempts.set(ip, limit);
+        const email = 'guest-' + randomBytes(16).toString('hex') + '@guest.invalid';
+        db.exec('BEGIN IMMEDIATE');
+        let id;
+        try {
+          id = Number(addCustomer(db, email, randomBytes(32).toString('hex'), 'Guest customer', ''));
+          sessionCookie(res, id, 30 * 24 * 60 * 60);
+          db.exec('COMMIT');
+        } catch (error) { db.exec('ROLLBACK'); res.removeHeader('Set-Cookie'); throw error; }
+        return json(201, { customer: asCustomer({ id, email, name: 'Guest customer', company: '' }) });
+      }
       if (path === '/api/service-orders' && req.method === 'POST') return await submitServiceOrder(req,json,db,user);
       if (path === '/api/chat' && req.method === 'POST') return await chat(req,json,db,user);
       if (path === '/api/login' && req.method === 'POST') {
@@ -46,10 +75,7 @@ export function createPortalServer(db = openDatabase(), options = {}) {
         const candidate = await derive(body.password,customer?.salt || dummySalt,64);
         if (!customer || !timingSafeEqual(candidate,Buffer.from(customer.password_hash,'hex'))) return json(401,{error:'Email or password is incorrect.'});
         attempts.delete(ip);
-        const session = randomBytes(32).toString('hex');
-        db.prepare('DELETE FROM sessions WHERE expires<=?').run(Date.now());
-        db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(hash(session),customer.id,Date.now()+28800000);
-        res.setHeader('Set-Cookie',`hem_session=${session}; HttpOnly; SameSite=Strict; Path=/api; Max-Age=28800${process.env.NODE_ENV==='production'?'; Secure':''}`);
+        sessionCookie(res, customer.id, 8 * 60 * 60);
         return json(200,{ok:true});
       }
       if (!user) return json(401,{error:'Please sign in to your client account.'});
@@ -58,7 +84,7 @@ export function createPortalServer(db = openDatabase(), options = {}) {
         res.setHeader('Set-Cookie',`hem_session=; HttpOnly; SameSite=Strict; Path=/api; Max-Age=0${process.env.NODE_ENV==='production'?'; Secure':''}`);
         return json(200,{ok:true});
       }
-      if (path === '/api/portal' && req.method === 'GET') return json(200,{customer:user,orders:customerOrders(db,user.id),subscriptions:db.prepare('SELECT id,service,plan,status,renewal_date FROM subscriptions WHERE customer_id=?').all(user.id),reports:db.prepare('SELECT id,title,sample_id,analysis,status,issued_at,filename FROM reports WHERE customer_id=? ORDER BY id DESC').all(user.id)});
+      if (path === '/api/portal' && req.method === 'GET') return json(200,{customer:asCustomer(user),orders:customerOrders(db,user.id),subscriptions:db.prepare('SELECT id,service,plan,status,renewal_date FROM subscriptions WHERE customer_id=?').all(user.id),reports:db.prepare('SELECT id,title,sample_id,analysis,status,issued_at,filename FROM reports WHERE customer_id=? ORDER BY id DESC').all(user.id)});
       const match = /^\/api\/reports\/(\d+)\/download$/.exec(path);
       if (match && req.method === 'GET') {
         const report = db.prepare("SELECT * FROM reports WHERE id=? AND customer_id=? AND status='Ready' AND content IS NOT NULL").get(Number(match[1]),user.id);

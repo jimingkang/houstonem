@@ -36,13 +36,15 @@ import { SERVICE_PRICING, MAX_QUOTE_SAMPLES, formatUsd, quoteSampleCount } from 
               </div>
               <div class="card">
                 @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
-                @if (loading()) { <p role="status">Checking your client session…</p> }
+                @if (loading()) { <p role="status">Preparing your checkout…</p> }
                 @else if (!signedIn()) {
-                  <h2>Sign in to continue</h2><p>Use your client account to submit the order and track its status.</p>
+                  <h2>Continue to checkout</h2><p>Try again as a guest or sign in with an existing account.</p>
+                  <button type="button" class="btn btn-outline" (click)="prepareCheckout()">Continue as guest</button>
                   <a routerLink="/portal" [queryParams]="{ orderService: entry.slug, samples: quantity() }" class="btn btn-primary">Sign in to Client Portal ↗</a>
                 } @else {
                   <form #orderForm="ngForm" (ngSubmit)="submit()">
                     <h2>Tell us about your samples</h2>
+                    @if (guest()) { <p class="note">Checking out as a guest. Use this browser to view your order in the Client Portal.</p> }
                     <label>Contact email<input type="email" email name="email" autocomplete="email" maxlength="254" required [(ngModel)]="email" [disabled]="busy()"></label>
                     <label>Sample and testing details<textarea name="notes" rows="5" minlength="10" maxlength="1500" required [(ngModel)]="notes" [disabled]="busy()" placeholder="Material, areas of interest, testing goals, and deadline"></textarea></label>
                     <button class="btn btn-primary" type="submit" [disabled]="busy() || orderForm.invalid || notes.trim().length < 10">{{ busy() ? 'Submitting…' : 'Submit service order' }} ↗</button>
@@ -67,6 +69,7 @@ export class ServiceOrderPage {
   protected readonly quantity = computed(() => this.price()?.unit === 'sample' ? quoteSampleCount(this.route.snapshot.queryParamMap.get('samples')) : 1);
   protected readonly loading = signal(true);
   protected readonly signedIn = signal(false);
+  protected readonly guest = signal(false);
   protected readonly busy = signal(false);
   protected readonly error = signal('');
   protected readonly receipt = signal<{id:string;status:string;subtotal_cents:number} | null>(null);
@@ -75,15 +78,21 @@ export class ServiceOrderPage {
   protected notes = '';
   private request: { signature: string; id: string } | undefined;
 
-  async ngOnInit() {
+  ngOnInit() {
+    if (this.price()?.startingUsd != null) void this.prepareCheckout();
+  }
+
+  protected async prepareCheckout() {
+    this.loading.set(true);
+    this.error.set('');
     try {
-      const response = await fetch('/api/portal');
-      if (response.status === 401) return;
-      if (!response.ok) throw new Error();
-      const { customer } = await response.json();
-      this.email = customer.email.includes('@') ? customer.email : '';
+      const response = await fetch('/api/guest-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Unable to prepare checkout.');
+      this.guest.set(result.customer.guest);
+      if (!result.customer.guest && !this.email && result.customer.email.includes('@')) this.email = result.customer.email;
       this.signedIn.set(true);
-    } catch { this.error.set('Unable to check your session. Refresh or sign in to continue.'); }
+    } catch (error) { this.error.set(error instanceof Error ? error.message : 'Unable to prepare checkout.'); }
     finally { this.loading.set(false); }
   }
 
