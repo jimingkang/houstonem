@@ -4,14 +4,16 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
 import { CONTACT, NAV } from '../data/site.data';
 import { BrandMark } from '../shared/brand-mark';
+import { SiteSearch } from '../shared/site-search';
 
 @Component({
   selector: 'app-site-header',
-  imports: [RouterLink, RouterLinkActive, BrandMark],
+  imports: [RouterLink, RouterLinkActive, BrandMark, SiteSearch],
   template: `
     <div class="utility">
       <div class="container utility-inner">
         <span class="mono">Independent expertise. Microscopic precision.</span>
+        <app-site-search class="utility-search" [compact]="true" />
         <div class="utility-links">
           <a [href]="contact.phoneHref">{{ contact.phone }}</a>
           <a [href]="'mailto:' + contact.email">{{ contact.email }}</a>
@@ -41,6 +43,7 @@ import { BrandMark } from '../shared/brand-mark';
         </button>
 
         <nav id="primary-nav" class="nav" [class.is-open]="open()" aria-label="Primary">
+          <app-site-search class="nav-search" />
           <ul>
             @for (item of nav; track item.link) {
               <li>
@@ -73,6 +76,21 @@ import { BrandMark } from '../shared/brand-mark';
       justify-content: space-between;
       gap: 1rem;
       min-height: 2.25rem;
+    }
+    .utility-search {
+      display: none;
+      flex: 0 1 24rem;
+    }
+    @media (min-width: 900px) {
+      .utility-inner {
+        min-height: 3.25rem;
+      }
+      .utility-search {
+        display: block;
+      }
+      .nav-search {
+        display: none;
+      }
     }
     .utility-inner > .mono {
       display: none;
@@ -202,6 +220,9 @@ import { BrandMark } from '../shared/brand-mark';
     }
 
     @media (min-width: 1200px) {
+      .nav-search {
+        display: none;
+      }
       .menu-toggle {
         display: none;
       }
