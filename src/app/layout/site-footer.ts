@@ -33,6 +33,12 @@ import { BrandMark } from '../shared/brand-mark';
               <li><a [routerLink]="item.link">{{ item.label }}</a></li>
             }
           </ul>
+          <h2 class="sub">For clients</h2>
+          <ul>
+            <li><a routerLink="/sample-submission">How to send samples</a></li>
+            <li><a routerLink="/services">Service catalog &amp; prices</a></li>
+            <li><a routerLink="/portal">Client portal</a></li>
+          </ul>
         </nav>
 
         <nav aria-label="Services" class="services">
@@ -116,6 +122,9 @@ import { BrandMark } from '../shared/brand-mark';
     }
     .btn-ghost:hover {
       border-color: var(--on-ink);
+    }
+    h2.sub {
+      margin-top: 2rem;
     }
     address {
       font-style: normal;

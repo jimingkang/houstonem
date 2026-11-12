@@ -37,6 +37,11 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/service-detail/service-detail').then((m) => m.ServiceDetailPage),
   },
   {
+    path: 'sample-submission',
+    title: 'How to send samples' + suffix,
+    loadComponent: () => import('./pages/sample-submission/sample-submission').then((m) => m.SampleSubmissionPage),
+  },
+  {
     path: 'galleries',
     title: 'Galleries' + suffix,
     loadComponent: () => import('./pages/galleries/galleries').then((m) => m.GalleriesPage),

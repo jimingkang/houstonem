@@ -1,5 +1,6 @@
-import { Component, computed, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, computed, inject, input, linkedSignal } from '@angular/core';
+import { Location } from '@angular/common';
+import { Router, RouterLink } from '@angular/router';
 import { SERVICES } from '../../data/site.data';
 import { SERVICE_CATEGORIES, SERVICE_PRICING, formatUsd } from '../../data/service-pricing';
 
@@ -19,8 +20,8 @@ import { SERVICE_CATEGORIES, SERVICE_PRICING, formatUsd } from '../../data/servi
     </section>
     <section class="container catalog" aria-label="Laboratory service catalog">
       <div class="filter-bar">
-        <label class="search"><span class="sr-only">Search laboratory services</span><input type="search" placeholder="Search techniques, samples or testing needs…" [value]="query()" (input)="query.set($event.target.value)"></label>
-        <label class="category-select"><span class="sr-only">Filter by category</span><select #categorySelect [value]="category()" (change)="category.set(categorySelect.value)">
+        <label class="search"><span class="sr-only">Search laboratory services</span><input type="search" placeholder="Search techniques, samples or testing needs…" [value]="query()" (input)="setQuery($event.target.value)"></label>
+        <label class="category-select"><span class="sr-only">Filter by category</span><select #categorySelect [value]="category()" (change)="setCategory(categorySelect.value)">
           <option value="">All categories</option>
           @for (item of categories; track item) { <option [value]="item">{{ item }}</option> }
         </select></label>
@@ -28,9 +29,9 @@ import { SERVICE_CATEGORIES, SERVICE_PRICING, formatUsd } from '../../data/servi
       <div class="catalog-layout">
         <aside aria-label="Service categories">
           <p class="mono">BROWSE BY CATEGORY</p>
-          <button type="button" [attr.aria-pressed]="!category()" (click)="category.set('')">All services <span>{{ services.length }}</span></button>
+          <button type="button" [attr.aria-pressed]="!category()" (click)="setCategory('')">All services <span>{{ services.length }}</span></button>
           @for (item of categories; track item) {
-            <button type="button" [attr.aria-pressed]="category() === item" (click)="category.set(item)">{{ item }} <span>{{ counts[item] }}</span></button>
+            <button type="button" [attr.aria-pressed]="category() === item" (click)="setCategory(item)">{{ item }} <span>{{ counts[item] }}</span></button>
           }
         </aside>
         <div>
@@ -51,7 +52,7 @@ import { SERVICE_CATEGORIES, SERVICE_PRICING, formatUsd } from '../../data/servi
                 </div>
               </article>
             } @empty {
-              <div class="empty"><h3>No matching services</h3><p>Try a different search or browse the full catalog.</p><button class="btn btn-outline" type="button" (click)="query.set(''); category.set('')">Clear filters</button></div>
+              <div class="empty"><h3>No matching services</h3><p>Try a different search or browse the full catalog.</p><button class="btn btn-outline" type="button" (click)="clearFilters()">Clear filters</button></div>
             }
           </div>
         </div>
@@ -82,8 +83,16 @@ export class ServicesPage {
   protected readonly categories = SERVICE_CATEGORIES;
   protected readonly services = SERVICES.map(service => ({ ...service, pricing: SERVICE_PRICING[service.slug] }));
   protected readonly counts = Object.fromEntries(SERVICE_CATEGORIES.map(category => [category, this.services.filter(service => service.pricing.category === category).length]));
-  protected readonly query = signal('');
-  protected readonly category = signal('');
+  private readonly router = inject(Router);
+  private readonly location = inject(Location);
+  /** Filters live in the URL (?category=…&q=…) so a filtered catalog can be linked and shared. */
+  readonly categoryParam = input<string | undefined>(undefined, { alias: 'category' });
+  readonly queryParam = input<string | undefined>(undefined, { alias: 'q' });
+  protected readonly category = linkedSignal(() => {
+    const value = this.categoryParam() ?? '';
+    return (SERVICE_CATEGORIES as readonly string[]).includes(value) ? value : '';
+  });
+  protected readonly query = linkedSignal(() => this.queryParam() ?? '');
   protected readonly money = formatUsd;
   protected readonly filtered = computed(() => {
     const terms = this.query().toLowerCase().trim().split(/\s+/).filter(Boolean);
@@ -92,4 +101,26 @@ export class ServicesPage {
       return (!this.category() || service.pricing.category === this.category()) && terms.every(term => text.includes(term));
     });
   });
+
+  protected setCategory(value: string): void {
+    this.category.set(value);
+    this.updateUrl({ category: value || null });
+  }
+
+  protected setQuery(value: string): void {
+    this.query.set(value);
+    this.updateUrl({ q: value.trim() ? value : null });
+  }
+
+  protected clearFilters(): void {
+    this.query.set('');
+    this.category.set('');
+    this.updateUrl({ category: null, q: null });
+  }
+
+  /** Rewrites the address bar without a router navigation, so filtering never scrolls the page. */
+  private updateUrl(queryParams: Record<string, string | null>): void {
+    const tree = this.router.createUrlTree(['/services'], { queryParams: { category: this.category() || null, q: this.query().trim() ? this.query() : null, ...queryParams } });
+    this.location.replaceState(this.router.serializeUrl(tree));
+  }
 }

@@ -1,19 +1,23 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, ElementRef, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
-import { CONTACT, NAV } from '../data/site.data';
+import { CONTACT, NAV, SERVICES } from '../data/site.data';
+import { SERVICE_CATEGORIES, SERVICE_PRICING, formatUsd } from '../data/service-pricing';
 import { BrandMark } from '../shared/brand-mark';
 import { SiteSearch } from '../shared/site-search';
 
 @Component({
   selector: 'app-site-header',
+  host: { '(document:keydown.escape)': 'servicesOpen.set(false)', '(document:click)': 'onDocClick($event)' },
   imports: [RouterLink, RouterLinkActive, BrandMark, SiteSearch],
   template: `
     <div class="utility">
       <div class="container utility-inner">
         <span class="mono">Independent expertise. Microscopic precision.</span>
-        <app-site-search class="utility-search" [compact]="true" />
+        @if (!isHome()) {
+          <app-site-search class="utility-search" [compact]="true" />
+        }
         <div class="utility-links">
           <a [href]="contact.phoneHref">{{ contact.phone }}</a>
           <a [href]="'mailto:' + contact.email">{{ contact.email }}</a>
@@ -46,7 +50,7 @@ import { SiteSearch } from '../shared/site-search';
           <app-site-search class="nav-search" />
           <ul>
             @for (item of nav; track item.link) {
-              <li>
+              <li [class.has-menu]="item.link === '/services'" [class.no-hover]="item.link === '/services' && hoverSuppressed()" (mouseleave)="hoverSuppressed.set(false)">
                 <a
                   [routerLink]="item.link"
                   routerLinkActive="active"
@@ -54,6 +58,44 @@ import { SiteSearch } from '../shared/site-search';
                   ariaCurrentWhenActive="page"
                   >{{ item.label }}</a
                 >
+                @if (item.link === '/services') {
+                  <button
+                    type="button"
+                    class="menu-caret"
+                    aria-controls="services-menu"
+                    [attr.aria-expanded]="servicesOpen()"
+                    (click)="servicesOpen.set(!servicesOpen())"
+                  >
+                    <span class="sr-only">Show service categories</span>
+                    <svg aria-hidden="true" viewBox="0 0 12 12" width="10" height="10"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" /></svg>
+                  </button>
+                  <div id="services-menu" class="mega" [class.is-open]="servicesOpen()">
+                    <div class="mega-inner">
+                      @for (group of serviceGroups; track group.category) {
+                        <div class="mega-col">
+                          <a class="mega-head mono" routerLink="/services" [queryParams]="{ category: group.category }">{{ group.category }}</a>
+                          <ul>
+                            @for (s of group.services; track s.slug) {
+                              <li>
+                                <a [routerLink]="['/services', s.slug]">
+                                  <span>{{ s.title }}</span>
+                                  <small>{{ s.price }}</small>
+                                </a>
+                              </li>
+                            }
+                          </ul>
+                        </div>
+                      }
+                      <div class="mega-aside">
+                        <span class="mono">NOT SURE WHAT YOU NEED?</span>
+                        <p>Describe the sample and the question. Our Ph.D. expert will recommend the right technique, free of charge.</p>
+                        <a class="btn btn-primary" routerLink="/contact">Ask an expert <span aria-hidden="true">↗</span></a>
+                        <a class="text-link" routerLink="/services">Browse the full catalog →</a>
+                        <a class="text-link" routerLink="/sample-submission">How to send samples →</a>
+                      </div>
+                    </div>
+                  </div>
+                }
               </li>
             }
           </ul>
@@ -64,6 +106,45 @@ import { SiteSearch } from '../shared/site-search';
     </header>
   `,
   styles: `
+    .menu-caret, .mega { display: none; }
+    @media (min-width: 1200px) {
+      .has-menu { display: flex; align-items: center; }
+      .menu-caret {
+        display: inline-grid; place-items: center; width: 1.25rem; height: 1.5rem;
+        margin-left: -0.25rem; padding: 0; border: 0; background: none; color: var(--muted); cursor: pointer;
+      }
+      .menu-caret[aria-expanded='true'] svg { transform: rotate(180deg); }
+      .menu-caret svg { transition: transform 150ms ease; }
+      .mega {
+        position: absolute; left: 0; right: 0; top: 100%;
+        background: var(--surface); border-block: 1px solid var(--line); box-shadow: var(--shadow);
+      }
+      .mega::before { content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 1.6rem; }
+      .has-menu:not(.no-hover):hover .mega, .mega.is-open { display: block; }
+      .mega-inner {
+        max-width: var(--container); margin-inline: auto; padding: 1.75rem 1.25rem 2rem;
+        display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) 17rem; gap: 1.75rem 2rem;
+      }
+      .nav .mega-col ul { display: flex; flex-direction: column; gap: 0; margin: 0.5rem 0 0; padding: 0; list-style: none; }
+      .nav .mega-head {
+        display: block; padding: 0 0 0.5rem; font-size: 0.6875rem; letter-spacing: 0.08em; text-transform: uppercase;
+        color: var(--primary); border-bottom: 1px solid var(--line);
+      }
+      .nav .mega-col ul a {
+        display: flex; justify-content: space-between; gap: 1rem; padding: 0.45rem 0; font-size: 0.8125rem; color: var(--ink);
+      }
+      .nav .mega-col ul a::after { display: none; }
+      .nav .mega-col ul a:hover span { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
+      .mega-col small { color: var(--muted); font-size: 0.75rem; white-space: nowrap; }
+      .mega-aside {
+        grid-column: 4; grid-row: 1 / span 2; display: flex; flex-direction: column; gap: 0.75rem; align-items: flex-start;
+        padding: 1.25rem; background: #edf3f0; border-radius: var(--radius);
+      }
+      .mega-aside .mono { font-size: 0.6875rem; letter-spacing: 0.08em; color: var(--primary); }
+      .mega-aside p { font-size: 0.8125rem; color: var(--muted); line-height: 1.6; }
+      .nav .mega-aside .text-link { padding: 0; font-size: 0.8125rem; color: var(--ink); }
+      .nav .mega-aside .btn { color: var(--on-primary); padding: 0.6rem 1rem; }
+    }
     .portal-link { font-size: 12px; font-weight: 600; text-decoration: none; white-space: nowrap; }
     .utility {
       background: var(--ink);
@@ -270,13 +351,38 @@ export class SiteHeader {
   protected readonly nav = NAV;
   protected readonly contact = CONTACT;
   protected readonly open = signal(false);
+  protected readonly servicesOpen = signal(false);
+  /** After a navigation, keep the hover menu closed until the pointer leaves it. */
+  protected readonly hoverSuppressed = signal(false);
+  /** The home hero has its own large search box, so the header one is hidden there. */
+  protected readonly isHome = signal(false);
+  private readonly host = inject(ElementRef<HTMLElement>);
+
+  /** Services grouped by catalog category, for the desktop mega menu. */
+  protected readonly serviceGroups = SERVICE_CATEGORIES.map((category) => ({
+    category,
+    services: SERVICES.filter((s) => SERVICE_PRICING[s.slug]?.category === category).map((s) => {
+      const price = SERVICE_PRICING[s.slug].startingUsd;
+      return { slug: s.slug, title: s.title, price: price === null ? 'Included' : 'From ' + formatUsd(price) };
+    }),
+  })).filter((g) => g.services.length);
+
+  protected onDocClick(event: Event): void {
+    const menu = this.host.nativeElement.querySelector('li.has-menu');
+    if (this.servicesOpen() && menu && !menu.contains(event.target as Node)) this.servicesOpen.set(false);
+  }
 
   constructor() {
-    inject(Router)
-      .events.pipe(
+    const router = inject(Router);
+    router.events.pipe(
         filter((e) => e instanceof NavigationEnd),
         takeUntilDestroyed(),
       )
-      .subscribe(() => this.open.set(false));
+      .subscribe(() => {
+        this.open.set(false);
+        this.servicesOpen.set(false);
+        this.hoverSuppressed.set(!!this.host.nativeElement.querySelector('li.has-menu:hover'));
+        this.isHome.set(router.url.split(/[?#]/)[0] === '/');
+      });
   }
 }

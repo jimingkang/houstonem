@@ -468,6 +468,7 @@ export const SEARCH_INDEX: SearchEntry[] = [
     keywords: [s.short, s.summary, ...s.highlights].join(' ').toLowerCase(),
   })),
   { label: 'Galleries', hint: 'Page', link: '/galleries', keywords: 'images micrographs fracture insects sea water egg shell' },
+  { label: 'How to send samples', hint: 'Guide', link: '/sample-submission', keywords: 'ship shipping send sample submission packing package drop off address label' },
   { label: 'Client portal', hint: 'Page', link: '/portal', keywords: 'login sign in reports account' },
   { label: 'Request a quote', hint: 'Contact', link: '/contact', keywords: 'contact price quote offer phone email address' },
 ];
