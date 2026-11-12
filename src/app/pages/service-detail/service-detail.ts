@@ -1,16 +1,17 @@
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Title } from '@angular/platform-browser';
-import { SERVICES } from '../../data/site.data';
+import { CONTACT, FAQS, SERVICES } from '../../data/site.data';
 import { SERVICE_PRICING, MAX_QUOTE_SAMPLES, formatUsd, quoteSampleCount } from '../../data/service-pricing';
 import { PageHeader } from '../../shared/page-header';
 import { SemFrame } from '../../shared/sem-frame';
-import { CtaBand } from '../../shared/cta-band';
+import { FaqList } from '../../shared/faq-list';
+import { QuoteForm } from '../../shared/quote-form';
 import { NotFoundPage } from '../not-found/not-found';
 
 @Component({
   selector: 'app-service-detail-page',
-  imports: [RouterLink, PageHeader, SemFrame, CtaBand, NotFoundPage],
+  imports: [RouterLink, PageHeader, SemFrame, FaqList, QuoteForm, NotFoundPage],
   template: `
     @if (service(); as s) {
       <app-page-header
@@ -18,7 +19,12 @@ import { NotFoundPage } from '../not-found/not-found';
         [title]="s.title"
         [lead]="s.summary"
         [parent]="{ label: 'Services', link: '/services' }"
-      />
+      >
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#quote" (click)="scrollTo($event, 'quote')">Ask for an offer <span aria-hidden="true">↗</span></a>
+          <a class="btn btn-outline" routerLink="/services">See all services</a>
+        </div>
+      </app-page-header>
 
       <section class="section">
         <div class="container detail-layout">
@@ -91,12 +97,41 @@ import { NotFoundPage } from '../not-found/not-found';
         </div>
       </section>
 
-      <app-cta-band />
+      <section class="section" aria-labelledby="faq-title">
+        <div class="container faq-wrap">
+          <h2 id="faq-title" class="h2">Frequently asked questions</h2>
+          <app-faq-list [items]="faqs" [openFirst]="false" />
+        </div>
+      </section>
+
+      <section class="section quote" id="quote">
+        <div class="container quote-grid">
+          <div class="stack">
+            <span class="eyebrow">Need an analysis?</span>
+            <h2 class="h2">Tell us about your {{ s.short }} project</h2>
+            <p class="lead">Describe your samples and what you need to find out. Our Ph.D. expert will recommend the right approach and confirm your quote.</p>
+            @for (person of contact.team; track person.email) {
+              <div class="person">
+                <strong>{{ person.name }}</strong>
+                <span>{{ person.role }}</span>
+                <a [href]="'mailto:' + person.email">{{ person.email }}</a>
+              </div>
+            }
+          </div>
+          <app-quote-form [service]="s.title" [samples]="quantity()" />
+        </div>
+      </section>
     } @else {
       <app-not-found-page />
     }
   `,
   styles: `
+    .hero-actions{display:flex;flex-wrap:wrap;gap:.75rem;margin-top:.75rem}
+    .faq-wrap{display:grid;gap:2rem;max-width:56rem}
+    .quote{background:#edf3f0;border-top:1px solid var(--line);scroll-margin-top:6rem}
+    .quote-grid{display:grid;gap:2.5rem}
+    @media(min-width:1024px){.quote-grid{grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:4rem;align-items:start}}
+    .person{display:flex;flex-direction:column;gap:.125rem;padding-top:1rem;border-top:1px solid var(--line);font-size:.875rem}.person span{color:var(--muted)}.person a{color:var(--primary);text-decoration:none}
     .detail-layout{display:grid;gap:2rem;align-items:start}
     @media(min-width:900px){.detail-layout{grid-template-columns:minmax(0,1fr) minmax(17rem,22rem);gap:3rem}.quote-card{position:sticky;top:1.5rem}}
     .specs{margin:0;border-top:1px solid var(--line)}.specs>div{padding:.9rem 0;border-bottom:1px solid var(--line)}.specs dt{font-weight:600;font-size:.9rem}.specs dd{margin:.2rem 0 0;color:var(--muted);font-size:.88rem}
@@ -159,6 +194,8 @@ import { NotFoundPage } from '../not-found/not-found';
 })
 export class ServiceDetailPage {
   readonly slug = input.required<string>();
+  protected readonly contact = CONTACT;
+  protected readonly faqs = FAQS;
 
   protected readonly service = computed(() => SERVICES.find((s) => s.slug === this.slug()));
   protected readonly pricing = computed(() => SERVICE_PRICING[this.slug()]);
@@ -182,5 +219,10 @@ export class ServiceDetailPage {
       const s = this.service();
       title.setTitle(`${s ? s.title : 'Service not found'} | Houston Electron Microscopy`);
     });
+  }
+
+  protected scrollTo(event: Event, id: string): void {
+    event.preventDefault();
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }

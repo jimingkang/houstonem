@@ -21,6 +21,7 @@ import { RouterLink } from '@angular/router';
         @if (lead()) {
           <p class="lead">{{ lead() }}</p>
         }
+        <ng-content />
       </div>
     </section>
   `,
