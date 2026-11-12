@@ -3,7 +3,8 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { map } from 'rxjs';
 import { DomSanitizer } from '@angular/platform-browser';
-import { CONTACT } from '../../data/site.data';
+import { CONTACT, SERVICES } from '../../data/site.data';
+import { quoteSampleCount } from '../../data/service-pricing';
 import { QuoteForm } from '../../shared/quote-form';
 import { PageHeader } from '../../shared/page-header';
 
@@ -20,7 +21,7 @@ import { PageHeader } from '../../shared/page-header';
 
     <section class="section">
       <div class="container split">
-        <app-quote-form heading="Request a quote" [need]="need()" [service]="service()" />
+        <app-quote-form heading="Request a quote" [need]="need()" [service]="service()" [samples]="samples()" />
 
         <div class="stack">
           <div class="card">
@@ -116,7 +117,20 @@ export class ContactPage {
   protected readonly contact = CONTACT;
   private readonly params = inject(ActivatedRoute).queryParamMap;
   protected readonly need = toSignal(this.params.pipe(map((p) => p.get('need') ?? '')), { initialValue: '' });
-  protected readonly service = toSignal(this.params.pipe(map((p) => p.get('service') ?? '')), { initialValue: '' });
+  /** `?service=` accepts a service slug (from service pages) or a title. */
+  protected readonly service = toSignal(
+    this.params.pipe(
+      map((p) => {
+        const v = p.get('service') ?? '';
+        return SERVICES.find((s) => s.slug === v || s.title === v)?.title ?? '';
+      }),
+    ),
+    { initialValue: '' },
+  );
+  protected readonly samples = toSignal(
+    this.params.pipe(map((p) => (p.has('samples') ? quoteSampleCount(p.get('samples')) : null))),
+    { initialValue: null },
+  );
   protected readonly mapUrl = inject(DomSanitizer).bypassSecurityTrustResourceUrl(
     `https://maps.google.com/maps?q=${encodeURIComponent(CONTACT.mapQuery)}&z=15&output=embed`,
   );

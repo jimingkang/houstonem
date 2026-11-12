@@ -1,6 +1,8 @@
-import { Component, effect, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CONTACT, SERVICES } from '../data/site.data';
+import { SERVICE_PRICING, formatUsd, quoteSampleCount } from '../data/service-pricing';
 
 let nextId = 0;
 
@@ -57,9 +59,11 @@ let nextId = 0;
             @for (s of services; track s.slug) {
               <option [value]="s.title">{{ s.title }}</option>
             }
-            <option value="Micro FT-IR Analysis">Micro FT-IR Analysis</option>
           </select>
         </label>
+        @if (estimate(); as e) {
+          <p class="estimate" role="status">{{ e }} <span>Final pricing is confirmed by the lab after reviewing your samples.</span></p>
+        }
         <label class="field">
           <span>What do you need to find out? *</span>
           <textarea
@@ -139,6 +143,8 @@ let nextId = 0;
     .tips { margin: 0; padding: 1rem 1.125rem 1rem 2.25rem; background: var(--primary-soft); border-radius: var(--radius); font-size: 0.875rem; color: var(--muted); }
     .submit { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
     .submit a { color: var(--primary); }
+    .estimate { margin: 0; padding: 0.75rem 1rem; border-left: 3px solid var(--primary); background: var(--primary-soft); font-size: 0.875rem; font-weight: 500; }
+    .estimate span { display: block; font-weight: 400; color: var(--muted); }
     .success { padding: 0.75rem 1rem; background: var(--primary-soft); border-radius: var(--radius); font-size: 0.9375rem; }
   `,
 })
@@ -146,6 +152,7 @@ export class QuoteForm {
   readonly heading = input('Ask for an offer');
   readonly service = input('');
   readonly need = input('');
+  readonly samples = input<number | null>(null);
 
   protected readonly contact = CONTACT;
   protected readonly services = SERVICES;
@@ -165,9 +172,26 @@ export class QuoteForm {
     frequency: [''],
   });
 
+  private readonly values = toSignal(this.form.valueChanges, { initialValue: this.form.getRawValue() });
+
+  /** Illustrative starting estimate for the selected service and sample count. */
+  protected readonly estimate = computed(() => {
+    const v = this.values();
+    const service = SERVICES.find((s) => s.title === v.service);
+    const price = service && SERVICE_PRICING[service.slug];
+    if (!price || price.startingUsd === null) return null;
+    const qty = price.unit === 'sample' ? quoteSampleCount(String(v.count ?? '').trim()) : 1;
+    const scope = price.unit === 'sample' ? `${qty} ${qty === 1 ? 'sample' : 'samples'}` : '1 project';
+    return `Illustrative starting estimate for ${scope}: ${formatUsd(price.startingUsd * qty)} USD.`;
+  });
+
   constructor() {
     effect(() => {
       if (this.service()) this.form.controls.service.setValue(this.service());
+    });
+    effect(() => {
+      const n = this.samples();
+      if (n) this.form.controls.count.setValue(String(n));
     });
     effect(() => {
       if (this.need() && !this.form.controls.message.value) this.form.controls.message.setValue(this.need());
@@ -194,6 +218,7 @@ export class QuoteForm {
       v.service ? `Service: ${v.service}` : null,
       v.material ? `Sample material: ${v.material}` : null,
       v.count ? `Number of samples: ${v.count}` : null,
+      this.estimate(),
       `Recurring need: ${v.recurring === 'yes' ? `yes${v.frequency ? ` (${v.frequency})` : ''}` : 'no'}`,
       '',
       v.message,

@@ -264,6 +264,33 @@ export const SERVICES: Service[] = [
     highlights: ['No extra charge', 'Non-conductive samples', 'Optional', 'High magnification'],
     image: IMAGES.polymers,
   },
+  {
+    slug: 'micro-ftir',
+    title: 'Micro FT-IR Material Identification',
+    short: 'Micro FT-IR',
+    summary: 'Characterize small polymer fragments, films and organic residues using infrared spectroscopy.',
+    body: ['Micro FT-IR measures infrared absorption in a selected region of a sample. Its spectrum can help distinguish polymers and identify characteristic chemical groups in organic materials.', 'Complex mixtures or weak signals can limit identification. Discuss the sample and target area with the laboratory before shipping.'],
+    highlights: ['Polymers and films', 'Organic residues', 'Infrared spectrum'],
+    image: IMAGES.ftir,
+  },
+  {
+    slug: 'elemental-mapping',
+    title: 'SEM/EDS Elemental Mapping',
+    short: 'EDS mapping',
+    summary: 'Visualize how elements are distributed across a selected surface or cross-section.',
+    body: ['SEM/EDS maps show where detectable elements occur across the selected field. Maps can help locate inclusions, compare phases and inspect the distribution of elements through a coating or interface.', 'The laboratory will confirm the field of view, target elements and preparation needed for your sample.'],
+    highlights: ['Color elemental maps', 'Coatings and interfaces', 'Inclusions and phases'],
+    image: IMAGES.particle,
+  },
+  {
+    slug: 'combined-characterization',
+    title: 'SEM/EDS + Micro FT-IR Characterization',
+    short: 'Combined analysis',
+    summary: 'Combine morphology, elemental information and infrared spectroscopy for mixed or unknown materials.',
+    body: ['SEM/EDS examines morphology and elemental composition. Micro FT-IR adds information about chemical groups in suitable organic components. The techniques can be complementary when a single method leaves the material identity uncertain.', 'The lab will confirm that both techniques are appropriate and agree which areas to investigate before testing.'],
+    highlights: ['Two complementary methods', 'Mixed materials', 'Integrated findings'],
+    image: IMAGES.ftir,
+  },
 ];
 
 export const MATERIALS: Tile[] = [
@@ -357,7 +384,6 @@ export const NAV = [
   { label: 'Micro FT-IR', link: '/micro-ftir' },
   { label: 'Services', link: '/services' },
   { label: 'Galleries', link: '/galleries' },
-  { label: 'Shop', link: '/shop' },
   { label: 'Contact', link: '/contact' },
 ] as const;
 
@@ -425,30 +451,6 @@ export const FAQS: Faq[] = [
   },
 ];
 
-/** Typical sample types and questions per service, used on service detail pages. */
-export const SERVICE_EXTRAS: Record<string, { samples: string[]; questions: string[] }> = {
-  sem: {
-    samples: ['Metals and alloys', 'Polymers and fibers', 'Ceramics and powders', 'Geological samples'],
-    questions: ['What does this surface look like at high magnification?', 'How large are these features or particles?'],
-  },
-  eds: {
-    samples: ['Inclusions and particles', 'Deposits and scale', 'Coatings and platings', 'Unknown residues'],
-    questions: ['Which elements are present?', 'How are elements distributed across the sample?'],
-  },
-  'failure-analysis': {
-    samples: ['Fractured components', 'Fasteners and shafts', 'Welds', 'Non-metallic parts'],
-    questions: ['Was it fatigue, overload or corrosion?', 'Where did the failure initiate?'],
-  },
-  corrosion: {
-    samples: ['Pipe and tubing sections', 'Pitted surfaces', 'Corrosion products', 'Coupons'],
-    questions: ['What caused the corrosion?', 'Did corrosion cause the part to fail?'],
-  },
-  coatings: {
-    samples: ['Coatings on metals', 'Coatings on plastics', 'Platings', 'Multi-layer systems'],
-    questions: ['How thick is each layer?', 'Why did the coating delaminate?'],
-  },
-};
-
 export interface SearchEntry {
   label: string;
   hint: string;
@@ -466,7 +468,6 @@ export const SEARCH_INDEX: SearchEntry[] = [
     keywords: [s.short, s.summary, ...s.highlights].join(' ').toLowerCase(),
   })),
   { label: 'Galleries', hint: 'Page', link: '/galleries', keywords: 'images micrographs fracture insects sea water egg shell' },
-  { label: 'Laboratory shop', hint: 'Page', link: '/shop', keywords: 'stubs tabs vials tweezers accessories buy' },
   { label: 'Client portal', hint: 'Page', link: '/portal', keywords: 'login sign in reports account' },
   { label: 'Request a quote', hint: 'Contact', link: '/contact', keywords: 'contact price quote offer phone email address' },
 ];

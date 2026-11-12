@@ -3,7 +3,7 @@ import { Routes } from '@angular/router';
 const suffix = ' | Houston Electron Microscopy';
 
 export const routes: Routes = [
-  { path: 'shop', title: 'Laboratory Shop' + suffix, loadComponent: () => import('./pages/shop/shop').then(m => m.ShopPage) },
+  { path: 'shop', redirectTo: 'services', pathMatch: 'full' },
   { path: 'portal', title: 'Client Portal' + suffix, loadComponent: () => import('./pages/portal/portal').then(m => m.PortalPage) },
   {
     path: '',
@@ -30,6 +30,7 @@ export const routes: Routes = [
     title: 'Services' + suffix,
     loadComponent: () => import('./pages/services/services').then((m) => m.ServicesPage),
   },
+  { path: 'services/:slug/order', title: 'Order laboratory service' + suffix, loadComponent: () => import('./pages/service-order/service-order').then(m => m.ServiceOrderPage) },
   {
     path: 'services/:slug',
     loadComponent: () => import('./pages/service-detail/service-detail').then((m) => m.ServiceDetailPage),

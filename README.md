@@ -5,14 +5,22 @@ Requires Node.js 24+ and installed frontend dependencies (`npm install`).
 
 ## Development
 
-Run in two terminals:
+One command starts both the Angular dev server and the API:
 
 ```sh
-npm run api
 npm run dev
 ```
 
-Open http://localhost:3000. Angular proxies `/api` to port 3001. Restart an existing Angular development server after changing proxy configuration. The portal is at `/portal`.
+Open http://localhost:3000. Angular proxies `/api` to the API on port 3001. Restart the development server after changing proxy configuration. The portal is at `/portal`.
+
+## Production
+
+```sh
+npm run build
+npm start
+```
+
+`npm start` runs one Node process that serves the built site from `dist/houston-em` and the `/api` endpoints on the same port. It listens on `PORT` (default 3001) and `HOST` (default `0.0.0.0`), runs with `NODE_ENV=production` (no test account, secure cookies), and stores SQLite in `DATA_DIR`, else `POCKETBAY_DATA_DIR`, else `server/data`.
 
 SQLite is initialized automatically at `server/data/portal.sqlite`. Set `DATA_DIR` to change its directory. Private reports are stored as BLOBs in SQLite and are never served from the public folder. Back up the database using SQLite's backup tools (including WAL handling); do not copy a live database file alone.
 
@@ -56,7 +64,6 @@ The floating assistant calls the backend `POST /api/chat`, which uses the local 
 ollama serve
 # In another terminal, if the model is not already installed:
 ollama pull llama3.2
-npm run api
 npm run dev
 ```
 
@@ -77,24 +84,24 @@ Hosted-provider keys are unused and have been removed from the local configurati
 
 Tests use mocked Ollama responses and need no installed model. They cover request format, conversation history, account isolation, validation, timeouts, missing models and rate limits.
 
-## Accessory shop
+## Laboratory services and estimates
 
-`/shop` provides a searchable, categorized sample accessory catalog, a browser-saved cart and a signed-in order request form. SQLite stores products, order headers and item snapshots. In local development the API seeds six demo products once, using `INSERT OR IGNORE`; restarting does not reset inventory. Production does not seed demo products automatically.
+`/services` organizes the laboratory's catalog by testing category and supports keyword search. Each service detail includes sample guidance, expected deliverables and a proposed starting price in USD per sample or project. Rates are illustrative and centrally maintained in `src/app/data/service-pricing.ts`; verify them with the laboratory before publishing as approved prices. Gold sputtering is included when appropriate for an eligible SEM project.
 
-All seeded products, availability and USD prices are illustrative. Submitting an order creates an **Awaiting lab confirmation** request and reserves its quantities. The displayed subtotal excludes shipping/tax and is not a final quote. There is no automatic payment, Stripe integration or automated email; laboratory staff must review the saved requests and confirm pricing/payment offline. Customers see only their own orders in `/portal`.
+Sample-based estimates multiply the proposed rate by the selected quantity. The quote link carries the service and quantity into the contact form, where the customer can add sample and project details and open an email draft for laboratory review. The site does not send the email or issue a binding quote automatically.
 
-The backend calculates totals from the database, validates stock and quantities, stores item/price snapshots, and uses a transaction plus a per-customer request ID to prevent duplicate orders and overselling. Contact/shipping data is kept server-side; only the non-personal cart is stored in localStorage. The order list contains no shipping address.
+### Ordering a service
 
-For this initial version catalog changes and order fulfillment are managed with the SQLite database by laboratory staff; there is no admin web interface. Products have `active`, `stock`, `price_cents`, `demo`, category and description fields. `orders` contains the contact/address/notes for manual follow-up. The management CLI releases reserved stock transactionally on cancellation and prevents cancelling twice from returning stock twice. Before launch, replace demo products/prices and implement an approved fulfillment workflow.
+Open a service detail, set the sample quantity if applicable, and select **Order this service**. Checkout reuses an active client session or automatically creates a randomly named guest account. The customer supplies a real contact email and sample/testing notes. Guests can view their orders from the same browser for up to 30 days while their session cookie is present. Signing out or clearing that cookie ends guest access. The server calculates the estimate using the same catalog pricing as the frontend and records a price snapshot in SQLite. The order starts as **Awaiting lab confirmation** and appears under **My orders** in the Client Portal. The lab confirms the scope, quote and payment offline. No online payment or automatic email is sent. Project prices use a quantity of one; included SEM preparation is not a standalone order.
 
-Laboratory order review (local administrative terminal only):
+The `/shop` URL redirects to `/services`. Existing accessory orders remain visible for their owners and can still be managed; new accessory orders are no longer accepted. After updating the code, restart the server (`npm run dev` or `npm start`) so the service-order table is created in the existing database.
 
 ```sh
 npm run portal:manage -- orders
 npm run portal:manage -- order-status HEM-order-id "Confirmed - awaiting payment"
 npm run portal:manage -- order-status HEM-order-id "Fulfilled"
-# Or cancel a pending/confirmed request and release its reserved quantities:
+# Or cancel a pending or confirmed order:
 npm run portal:manage -- order-status HEM-order-id "Cancelled"
 ```
 
-Only mark fulfilled after manual payment/fulfillment checks. Status changes do not charge a card or send an email.
+Only mark an order fulfilled after manual payment and fulfillment checks. Cancelling a historical accessory order still releases its reserved stock.
