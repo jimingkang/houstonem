@@ -105,3 +105,13 @@ npm run portal:manage -- order-status HEM-order-id "Cancelled"
 ```
 
 Only mark an order fulfilled after manual payment and fulfillment checks. Cancelling a historical accessory order still releases its reserved stock.
+
+### Administration dashboard
+
+Create a dedicated administrator on the server using the same SQLite data directory as the running application. For example, on PocketBay use `DATA_DIR=/data`. Provide `CUSTOMER_PASSWORD` securely in the process environment (12–256 characters), then run:
+
+```sh
+npm run portal:manage -- admin-create admin@example.com "Lab Administrator"
+```
+
+Sign in through the Client Portal and select **Open administration**, or open `/admin` directly. The dashboard is read-only and provides searchable customer and order lists, including order items, contact information and sample notes. Customers and guests cannot call the admin API. There is no default administrator, and password hashes and session tokens are excluded from dashboard responses.

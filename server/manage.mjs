@@ -5,7 +5,20 @@ import { orderItems, updateOrderStatus } from './orders.mjs';
 const db=openDatabase();
 const [command,...args]=process.argv.slice(2);
 try {
-  if(command==='orders') {
+  if(command==='admin-create') {
+    const [email,name,company=''] = args;
+    const password = process.env.CUSTOMER_PASSWORD || '';
+    if (args.length<2 || args.length>3 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email || '') || /@guest\.invalid$/i.test(email) || !name?.trim() || password.length<12 || password.length>256) {
+      throw Error('Usage: with CUSTOMER_PASSWORD set (12–256 characters), run npm run portal:manage -- admin-create email "Name" ["Company"]');
+    }
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const id=addCustomer(db,email,password,name,company);
+      db.prepare('INSERT INTO administrators(customer_id) VALUES(?)').run(id);
+      db.exec('COMMIT');
+      console.log('Administrator created:', id);
+    } catch (error) { db.exec('ROLLBACK'); throw error; }
+  } else if(command==='orders') {
     const orders=db.prepare('SELECT o.*,c.company FROM orders o JOIN customers c ON c.id=o.customer_id ORDER BY created_at DESC').all();
     for(const order of orders) console.log(JSON.stringify({...order,items:orderItems(db,order.id)}));
   } else if(command==='order-status') {
@@ -28,5 +41,5 @@ try {
     if(content.length>25*1024*1024 || content.subarray(0,5).toString()!=='%PDF-') throw Error('Provide a PDF file up to 25 MB.');
     db.prepare('INSERT INTO reports(customer_id,title,sample_id,analysis,status,issued_at,filename,mime,content) VALUES(?,?,?,?,?,?,?,?,?)').run(customer.id,title,sample,analysis,'Ready',new Date().toISOString().slice(0,10),basename(file),'application/pdf',content);
     console.log('Report uploaded.');
-  } else throw Error('Commands: customer, subscribe, report, orders, order-status. See README.md.');
+  } else throw Error('Commands: admin-create, customer, subscribe, report, orders, order-status. See README.md.');
 } catch(e) { console.error(e.message); process.exitCode=1; } finally { db.close(); }

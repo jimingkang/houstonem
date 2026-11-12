@@ -8,9 +8,16 @@ import { seedTestCustomer } from './seed-test.mjs';
 import { createChatHandler } from './chat.mjs';
 import { customerOrders } from './orders.mjs';
 import { submitServiceOrder } from './service-orders.mjs';
+import { serveAdmin } from './admin.mjs';
 import { createStaticHandler } from './static.mjs';
 const derive = promisify(scrypt);
 const hash = value => createHash('sha256').update(value).digest('hex');
+const guestIdentity = /^guest-([a-f0-9]{32})@guest\.invalid$/;
+const guestName = identifier => 'Guest-' + identifier.slice(0, 8).toUpperCase();
+function asCustomer(user) {
+  const guest = guestIdentity.exec(user.email);
+  return { ...user, name: guest ? guestName(guest[1]) : user.name, guest: Boolean(guest), isAdmin: !guest && Boolean(user.isAdmin) };
+}
 export function createPortalServer(db = openDatabase(), options = {}) {
   const chat = createChatHandler(options.chat);
   const site = options.staticDir ? createStaticHandler(options.staticDir) : null;
@@ -22,14 +29,14 @@ export function createPortalServer(db = openDatabase(), options = {}) {
     db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(hash(session), customerId, Date.now() + seconds * 1000);
     res.setHeader('Set-Cookie', `hem_session=${session}; HttpOnly; SameSite=Strict; Path=/api; Max-Age=${seconds}${process.env.NODE_ENV==='production'?'; Secure':''}`);
   };
-  const asCustomer = user => ({ ...user, guest: /^guest-[a-f0-9]{32}@guest\.invalid$/.test(user.email) });
   const dummySalt = randomBytes(16).toString('hex');
   return createServer(async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     const json = (status, body) => { res.writeHead(status, {'Content-Type':'application/json'}); res.end(JSON.stringify(body)); };
     try {
-      const path = new URL(req.url, 'http://localhost').pathname;
+      const url = new URL(req.url, 'http://localhost');
+      const path = url.pathname;
       if (site && path !== '/api' && !path.startsWith('/api/')) return site(req,res,path);
       if (req.method === 'POST') {
         const origin = req.headers.origin;
@@ -39,7 +46,8 @@ export function createPortalServer(db = openDatabase(), options = {}) {
         if (!req.headers['content-type']?.startsWith('application/json')) return json(415,{error:'JSON required.'});
       }
       const token = /(?:^|;\s*)hem_session=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie || '')?.[1];
-      const user = token && db.prepare('SELECT c.id,c.email,c.name,c.company FROM sessions s JOIN customers c ON c.id=s.customer_id WHERE s.token_hash=? AND s.expires>?').get(hash(token),Date.now());
+      const user = token && db.prepare('SELECT c.id,c.email,c.name,c.company,EXISTS(SELECT 1 FROM administrators a WHERE a.customer_id=c.id) AS isAdmin FROM sessions s JOIN customers c ON c.id=s.customer_id WHERE s.token_hash=? AND s.expires>?').get(hash(token),Date.now());
+      if (path.startsWith('/api/admin/')) return serveAdmin(req,json,db,user && asCustomer(user),url,asCustomer);
       if (path === '/api/guest-session' && req.method === 'POST') {
         if (user) return json(200, { customer: asCustomer(user) });
         const now = Date.now();
@@ -51,17 +59,19 @@ export function createPortalServer(db = openDatabase(), options = {}) {
         }
         limit.count++;
         guestAttempts.set(ip, limit);
-        const email = 'guest-' + randomBytes(16).toString('hex') + '@guest.invalid';
+        const identifier = randomBytes(16).toString('hex');
+        const email = 'guest-' + identifier + '@guest.invalid';
+        const name = guestName(identifier);
         db.exec('BEGIN IMMEDIATE');
         let id;
         try {
-          id = Number(addCustomer(db, email, randomBytes(32).toString('hex'), 'Guest customer', ''));
+          id = Number(addCustomer(db, email, randomBytes(32).toString('hex'), name, ''));
           sessionCookie(res, id, 30 * 24 * 60 * 60);
           db.exec('COMMIT');
         } catch (error) { db.exec('ROLLBACK'); res.removeHeader('Set-Cookie'); throw error; }
-        return json(201, { customer: asCustomer({ id, email, name: 'Guest customer', company: '' }) });
+        return json(201, { customer: asCustomer({ id, email, name, company: '' }) });
       }
-      if (path === '/api/service-orders' && req.method === 'POST') return await submitServiceOrder(req,json,db,user);
+      if (path === '/api/service-orders' && req.method === 'POST') return await submitServiceOrder(req,json,db,user && asCustomer(user));
       if (path === '/api/chat' && req.method === 'POST') return await chat(req,json,db,user);
       if (path === '/api/login' && req.method === 'POST') {
         const ip = req.socket.remoteAddress;

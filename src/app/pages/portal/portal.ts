@@ -4,7 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { SERVICES } from '../../data/site.data';
 import { quoteSampleCount } from '../../data/service-pricing';
 interface PortalData {
-  customer: { name: string; company: string; email: string; guest?: boolean };
+  customer: { name: string; company: string; email: string; guest?: boolean; isAdmin?: boolean };
   orders: {id:string;status:string;subtotal_cents:number;created_at:string;items:{name:string;quantity:number;price_cents:number;demo:number;unit?:string|null}[]}[];
   subscriptions: { id: number; service: string; plan: string; status: string; renewal_date: string | null }[];
   reports: { id: number; title: string; sample_id: string; analysis: string; status: string; issued_at: string | null; filename: string | null }[];
@@ -21,6 +21,7 @@ interface PortalData {
         <button class="btn btn-primary" type="submit" [disabled]="busy()">{{busy() ? 'Signing in…' : 'Sign in to your workspace'}} <span>→</span></button><div class="login-note">Account or password assistance?<br><a href="mailto:LAB@houstonem.com">Contact LAB&#64;houstonem.com</a></div></form></div>
       } @else { @if (data(); as portal) {
         <div class="dashboard-head"><div><span class="eyebrow">CLIENT WORKSPACE</span><h1>Welcome, {{portal.customer.name}}.</h1>@if (portal.customer.guest) { <p>Guest session · Keep using this browser to access your orders.</p> } @else { <p>{{portal.customer.company}} · {{portal.customer.email}}</p> }</div><button type="button" class="btn btn-outline" (click)="logout()" [disabled]="busy()">Sign out ↗</button></div>
+        @if (portal.customer.isAdmin) { <a class="btn btn-primary" routerLink="/admin">Open administration ↗</a> }
         @if (returnService) { <a class="btn btn-primary" [routerLink]="['/services', returnService, 'order']" [queryParams]="{ samples: returnSamples }">Continue to service order ↗</a> }
         @if(error()){<p class="error" role="alert">{{error()}}</p>}
         <div class="stats"><div><span>Subscribed services</span><strong>{{portal.subscriptions.length}}</strong></div><div><span>Available reports</span><strong>{{readyReports()}}</strong></div><div><span>Laboratory support</span><a href="mailto:LAB@houstonem.com">Contact your expert ↗</a></div></div>

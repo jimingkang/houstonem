@@ -20,7 +20,8 @@ import { SERVICE_PRICING, MAX_QUOTE_SAMPLES, formatUsd, quoteSampleCount } from 
           } @else if (receipt(); as order) {
             <div class="card receipt" role="status">
               <h2>Order request received</h2><p>{{ order.status }} · {{ money(order.subtotal_cents / 100) }} USD estimated</p>
-              <p class="mono">{{ order.id }}</p><p>The lab will review your samples, confirm pricing and arrange payment. No payment was collected.</p>
+              <p class="mono">{{ order.id }}</p>
+              @if (guest()) { <p>Guest name: <strong>{{ guest() }}</strong></p> }<p>The lab will review your samples, confirm pricing and arrange payment. No payment was collected.</p>
               <a class="btn btn-primary" routerLink="/portal">View my orders ↗</a>
             </div>
           } @else {
@@ -44,7 +45,7 @@ import { SERVICE_PRICING, MAX_QUOTE_SAMPLES, formatUsd, quoteSampleCount } from 
                 } @else {
                   <form #orderForm="ngForm" (ngSubmit)="submit()">
                     <h2>Tell us about your samples</h2>
-                    @if (guest()) { <p class="note">Checking out as a guest. Use this browser to view your order in the Client Portal.</p> }
+                    @if (guest()) { <p class="note">Checking out as <strong>{{ guest() }}</strong>. Use this browser to view your order in the Client Portal.</p> }
                     <label>Contact email<input type="email" email name="email" autocomplete="email" maxlength="254" required [(ngModel)]="email" [disabled]="busy()"></label>
                     <label>Sample and testing details<textarea name="notes" rows="5" minlength="10" maxlength="1500" required [(ngModel)]="notes" [disabled]="busy()" placeholder="Material, areas of interest, testing goals, and deadline"></textarea></label>
                     <button class="btn btn-primary" type="submit" [disabled]="busy() || orderForm.invalid || notes.trim().length < 10">{{ busy() ? 'Submitting…' : 'Submit service order' }} ↗</button>
@@ -69,7 +70,7 @@ export class ServiceOrderPage {
   protected readonly quantity = computed(() => this.price()?.unit === 'sample' ? quoteSampleCount(this.route.snapshot.queryParamMap.get('samples')) : 1);
   protected readonly loading = signal(true);
   protected readonly signedIn = signal(false);
-  protected readonly guest = signal(false);
+  protected readonly guest = signal('');
   protected readonly busy = signal(false);
   protected readonly error = signal('');
   protected readonly receipt = signal<{id:string;status:string;subtotal_cents:number} | null>(null);
@@ -89,7 +90,7 @@ export class ServiceOrderPage {
       const response = await fetch('/api/guest-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Unable to prepare checkout.');
-      this.guest.set(result.customer.guest);
+      this.guest.set(result.customer.guest ? result.customer.name : '');
       if (!result.customer.guest && !this.email && result.customer.email.includes('@')) this.email = result.customer.email;
       this.signedIn.set(true);
     } catch (error) { this.error.set(error instanceof Error ? error.message : 'Unable to prepare checkout.'); }

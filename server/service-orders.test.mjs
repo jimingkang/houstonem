@@ -16,6 +16,8 @@ test('service orders use catalog pricing, preserve old orders and stay private',
   db.prepare("INSERT INTO products VALUES ('legacy','SKU-1','Accessory','Storage','Historical product','box',2000,3,'box',1,1)").run();
   db.prepare("INSERT INTO orders VALUES ('legacy-order',?,'legacy-key','legacy-hash','Awaiting lab confirmation',2000,'USD','Buyer','buyer@example.com','Historical address','','2026-01-01')").run(buyer);
   db.prepare("INSERT INTO order_items VALUES ('legacy-order','legacy','Accessory','SKU-1',1,2000,1)").run();
+  const staff = addCustomer(db, 'admin@example.com', 'admin-password-123', 'Lab Administrator', 'HEM');
+  db.prepare('INSERT INTO administrators VALUES (?)').run(staff);
   const server = createPortalServer(db);
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${server.address().port}`;
@@ -63,17 +65,50 @@ test('service orders use catalog pricing, preserve old orders and stay private',
     const guestCookie = guest.headers.get('set-cookie').split(';')[0];
     const { customer: guestCustomer } = await guest.json();
     assert.equal(guestCustomer.guest, true);
+    assert.match(guestCustomer.name, /^Guest-[0-9A-F]{8}$/);
+    assert.equal(db.prepare('SELECT name FROM customers WHERE id=?').get(guestCustomer.id).name, guestCustomer.name);
     assert.notEqual(guestCustomer.id, buyer);
     assert.match(guestCustomer.email, /^guest-[a-f0-9]{32}@guest\.invalid$/);
     const reused = await post('/api/guest-session', {}, guestCookie);
     assert.equal(reused.status, 200);
-    assert.equal((await reused.json()).customer.id, guestCustomer.id);
+    const reusedCustomer = (await reused.json()).customer;
+    assert.equal(reusedCustomer.id, guestCustomer.id);
+    assert.equal(reusedCustomer.name, guestCustomer.name);
+    db.prepare('UPDATE customers SET name=? WHERE id=?').run('Guest customer', guestCustomer.id);
+    assert.equal((await portal(guestCookie)).customer.name, guestCustomer.name);
     assert.deepEqual((await portal(guestCookie)).orders, []);
     const guestOrder = await post('/api/service-orders', order(), guestCookie);
     assert.equal(guestOrder.status, 201);
     const guestOrderId = (await guestOrder.json()).order.id;
     assert.deepEqual((await portal(guestCookie)).orders.map(o => o.id), [guestOrderId]);
     assert.ok(!(await portal(cookie)).orders.some(o => o.id === guestOrderId));
+
+    const adminGet = (resource, auth) => fetch(base + '/api/admin/' + resource, { headers: auth ? { Cookie: auth } : {} });
+    for (const resource of ['customers', 'orders']) {
+      assert.equal((await adminGet(resource)).status, 401);
+      for (const auth of [cookie, other, guestCookie]) assert.equal((await adminGet(resource, auth)).status, 403);
+    }
+    const admin = await signIn('admin@example.com', 'admin-password-123');
+    assert.equal((await portal(admin)).customer.isAdmin, true);
+    const customers = await (await adminGet('customers', admin)).json();
+    assert.equal(customers.total, 4);
+    assert.equal(customers.customers.find(c => c.id === guestCustomer.id).name, guestCustomer.name);
+    assert.equal(customers.customers.find(c => c.id === buyer).order_count, 2);
+    assert.ok(customers.customers.every(c => !('password_hash' in c) && !('salt' in c)));
+    assert.equal((await (await adminGet('customers?q=buyer%40example.com', admin)).json()).total, 1);
+    const orders = await (await adminGet('orders', admin)).json();
+    assert.equal(orders.total, 3);
+    const guestRow = orders.orders.find(o => o.id === guestOrderId);
+    assert.equal(guestRow.customer_name, guestCustomer.name);
+    assert.equal(guestRow.shipping_email, 'buyer@example.com');
+    assert.match(guestRow.notes, /mounted metal samples/);
+    assert.equal(guestRow.items[0].quantity, 3);
+    assert.ok(!('request_hash' in guestRow));
+    assert.equal((await (await adminGet('orders?customerId=' + buyer, admin)).json()).total, 2);
+    assert.equal((await adminGet('orders?customerId=invalid', admin)).status, 400);
+    assert.equal((await post('/api/admin/orders', {}, admin)).status, 405);
+    db.prepare('DELETE FROM administrators WHERE customer_id=?').run(staff);
+    assert.equal((await adminGet('orders', admin)).status, 403);
 
     updateOrderStatus(db, saved.id, 'Confirmed - awaiting payment');
     assert.equal((await portal(cookie)).orders.find(o => o.id === saved.id).status, 'Confirmed - awaiting payment');

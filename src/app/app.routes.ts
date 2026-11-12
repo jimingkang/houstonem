@@ -3,6 +3,7 @@ import { Routes } from '@angular/router';
 const suffix = ' | Houston Electron Microscopy';
 
 export const routes: Routes = [
+  { path: 'admin', title: 'Administration' + suffix, loadComponent: () => import('./pages/admin/admin').then(m => m.AdminPage) },
   { path: 'shop', redirectTo: 'services', pathMatch: 'full' },
   { path: 'portal', title: 'Client Portal' + suffix, loadComponent: () => import('./pages/portal/portal').then(m => m.PortalPage) },
   {
