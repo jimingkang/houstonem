@@ -31,7 +31,7 @@ export function createChatHandler({ fetchImpl = fetch, baseUrl = process.env.OLL
     if(body.includeAccount===true){
       if(!user)return json(401,{error:'Sign in to the client portal before asking about your account.'});
       if(messages.length!==1)return json(400,{error:'Start a new chat to include current account details.'});
-      context=JSON.stringify({subscriptions:db.prepare('SELECT service,plan,status,renewal_date FROM subscriptions WHERE customer_id=? LIMIT 30').all(user.id),reports:db.prepare('SELECT title,sample_id,analysis,status,issued_at FROM reports WHERE customer_id=? ORDER BY id DESC LIMIT 30').all(user.id)});
+      context=JSON.stringify({subscriptions:await db.prepare('SELECT service,plan,status,renewal_date FROM subscriptions WHERE customer_id=? LIMIT 30').all(user.id),reports:await db.prepare('SELECT title,sample_id,analysis,status,issued_at FROM reports WHERE customer_id=? ORDER BY id DESC LIMIT 30').all(user.id)});
     }
     active++;
     try {

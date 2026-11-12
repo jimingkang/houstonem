@@ -1,6 +1,6 @@
 import { Component, signal, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SERVICES } from '../../data/site.data';
 import { quoteSampleCount } from '../../data/service-pricing';
 interface PortalData {
@@ -21,7 +21,6 @@ interface PortalData {
         <button class="btn btn-primary" type="submit" [disabled]="busy()">{{busy() ? 'Signing in…' : 'Sign in to your workspace'}} <span>→</span></button><div class="login-note">Account or password assistance?<br><a href="mailto:LAB@houstonem.com">Contact LAB&#64;houstonem.com</a></div></form></div>
       } @else { @if (data(); as portal) {
         <div class="dashboard-head"><div><span class="eyebrow">CLIENT WORKSPACE</span><h1>Welcome, {{portal.customer.name}}.</h1>@if (portal.customer.guest) { <p>Guest session · Keep using this browser to access your orders.</p> } @else { <p>{{portal.customer.company}} · {{portal.customer.email}}</p> }</div><button type="button" class="btn btn-outline" (click)="logout()" [disabled]="busy()">Sign out ↗</button></div>
-        @if (portal.customer.isAdmin) { <a class="btn btn-primary" routerLink="/admin">Open administration ↗</a> }
         @if (returnService) { <a class="btn btn-primary" [routerLink]="['/services', returnService, 'order']" [queryParams]="{ samples: returnSamples }">Continue to service order ↗</a> }
         @if(error()){<p class="error" role="alert">{{error()}}</p>}
         <div class="stats"><div><span>Subscribed services</span><strong>{{portal.subscriptions.length}}</strong></div><div><span>Available reports</span><strong>{{readyReports()}}</strong></div><div><span>Laboratory support</span><a href="mailto:LAB@houstonem.com">Contact your expert ↗</a></div></div>
@@ -39,13 +38,14 @@ interface PortalData {
 })
 export class PortalPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   protected readonly returnService = SERVICES.find(service => service.slug === this.route.snapshot.queryParamMap.get('orderService'))?.slug;
   protected readonly returnSamples = quoteSampleCount(this.route.snapshot.queryParamMap.get('samples'));
   protected readonly loading=signal(true); protected readonly busy=signal(false); protected readonly error=signal('');
   protected readonly data=signal<PortalData|null>(null); protected readonly downloading=signal<number|null>(null);
   protected email=''; protected password=''; protected query='';
   async ngOnInit(){try{await this.load();}finally{this.loading.set(false);}}
-  private async load(){try{const res=await fetch('/api/portal');if(res.status===401){this.data.set(null);return;}if(!res.ok)throw Error();this.data.set(await res.json());}catch{this.error.set('Unable to connect to the laboratory. Please try again shortly.');}}
+  private async load(){try{const res=await fetch('/api/portal');if(res.status===401){this.data.set(null);return;}if(!res.ok)throw Error();const portal: PortalData=await res.json();if(portal.customer.isAdmin){await this.router.navigateByUrl('/admin',{replaceUrl:true});return;}this.data.set(portal);}catch{this.error.set('Unable to connect to the laboratory. Please try again shortly.');}}
   protected async login(){if(this.busy())return;this.busy.set(true);this.error.set('');try{const res=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:this.email,password:this.password})});const result=await res.json();if(!res.ok){this.error.set(result.error);return;}this.password='';await this.load();}catch{this.error.set('Unable to sign in. Please try again shortly.');}finally{this.busy.set(false);}}
   protected async logout(){this.busy.set(true);this.error.set('');try{const res=await fetch('/api/logout',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});if(!res.ok&&res.status!==401)throw Error();this.data.set(null);this.query='';}catch{this.error.set('Unable to sign out. Please try again.');}finally{this.busy.set(false);}}
   protected money(cents:number){return new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(cents/100);}

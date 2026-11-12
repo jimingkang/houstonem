@@ -114,4 +114,8 @@ Create a dedicated administrator on the server using the same SQLite data direct
 npm run portal:manage -- admin-create admin@example.com "Lab Administrator"
 ```
 
-Sign in through the Client Portal and select **Open administration**, or open `/admin` directly. The dashboard is read-only and provides searchable customer and order lists, including order items, contact information and sample notes. Customers and guests cannot call the admin API. There is no default administrator, and password hashes and session tokens are excluded from dashboard responses.
+Sign in through the Client Portal with an administrator account; it opens `/admin` directly. With `npm run dev` the local-only administrator is `admin / admin`, and `test / test` remains a regular customer. Production does not create the default development administrator. Select a customer name to see their subscriptions, report files and orders. The dashboard provides searchable customer and order lists. In a customer record, administrators can add an active subscription, upload a PDF report (up to 25 MB, published immediately), or update an order status. The same order controls are available in the Orders list. Updates use the existing order lifecycle and do not charge a card or send email. Customers and guests cannot call the admin API. There is no default administrator, and password hashes and session tokens are excluded from dashboard responses.
+
+### Isolated PocketBay test deployment
+
+Include the marker file `deploy/pocketbay-demo.enabled` **only** in the isolated test project's deployment archive. This starts a separate SQLite database at `/data/demo/portal.sqlite` on PocketBay (or `server/data/demo/portal.sqlite` locally) and seeds `admin/admin` and `test/test`. It never uses `DATA_DIR` or the normal database path in this mode. Do not upload production databases or use real customer information in the test project. Standard deployments do not include the marker.

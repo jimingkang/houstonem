@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { SERVICES } from '../src/app/data/site.data.ts';
 import { MAX_QUOTE_SAMPLES, SERVICE_PRICING } from '../src/app/data/service-pricing.ts';
+import { transaction } from './transactions.mjs';
 import { customerOrders } from './orders.mjs';
 
 export async function submitServiceOrder(req, json, db, user) {
@@ -24,26 +25,19 @@ export async function submitServiceOrder(req, json, db, user) {
   if (notes.length < 10 || notes.length > 1500) return json(400, { error: 'Describe your samples and testing needs in 10–1,500 characters.' });
   const requestHash = createHash('sha256').update(JSON.stringify({ service: service.slug, quantity, email, notes })).digest('hex');
   const cents = price.startingUsd * 100;
-  let id, status;
-  db.exec('BEGIN IMMEDIATE');
-  try {
-    const previous = db.prepare('SELECT id,request_hash FROM orders WHERE customer_id=? AND request_id=?').get(user.id, requestId);
-    if (previous) {
-      if (previous.request_hash !== requestHash) {
-        db.exec('ROLLBACK');
-        return json(409, { error: 'This order reference has already been used.' });
-      }
-      ({ id } = previous);
-      status = 200;
-    } else {
-      id = 'HEM-' + randomUUID();
-      db.prepare('INSERT INTO orders(id,customer_id,request_id,request_hash,subtotal_cents,shipping_name,shipping_email,shipping_address,notes,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)')
-        .run(id, user.id, requestId, requestHash, cents * quantity, user.name, email, '', notes, new Date().toISOString());
-      db.prepare('INSERT INTO service_order_items(order_id,service_slug,name,quantity,unit,price_cents) VALUES(?,?,?,?,?,?)')
-        .run(id, service.slug, service.title, quantity, price.unit, cents);
-      status = 201;
+  const result = await transaction(db, async tx => {
+    const proposedId = 'HEM-' + randomUUID();
+    const inserted = await tx.prepare(`INSERT INTO orders(id,customer_id,request_id,request_hash,subtotal_cents,shipping_name,shipping_email,shipping_address,notes,created_at)
+      VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(customer_id,request_id) DO NOTHING RETURNING id`)
+      .get(proposedId,user.id,requestId,requestHash,cents*quantity,user.name,email,'',notes,new Date().toISOString());
+    if (!inserted) {
+      const existing = await tx.prepare('SELECT id,request_hash FROM orders WHERE customer_id=? AND request_id=?').get(user.id,requestId);
+      return existing?.request_hash === requestHash ? { id: existing.id, status: 200 } : { status: 409 };
     }
-    db.exec('COMMIT');
-  } catch (error) { db.exec('ROLLBACK'); throw error; }
-  return json(status, { order: customerOrders(db, user.id, id)[0] });
+    await tx.prepare('INSERT INTO service_order_items(order_id,service_slug,name,quantity,unit,price_cents) VALUES(?,?,?,?,?,?)')
+      .run(proposedId,service.slug,service.title,quantity,price.unit,cents);
+    return { id: proposedId, status: 201 };
+  });
+  if (result.status === 409) return json(409,{error:'This order reference has already been used.'});
+  return json(result.status,{order:(await customerOrders(db,user.id,result.id))[0]});
 }

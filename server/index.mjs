@@ -3,11 +3,16 @@ import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify, parseEnv } from 'node:util';
 import { existsSync, readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
+import { openPostgres } from './postgres.mjs';
+import { transaction } from './transactions.mjs';
+import { seedPostgresDemo } from './seed-postgres.mjs';
 import { addCustomer, openDatabase } from './db.mjs';
-import { seedTestCustomer } from './seed-test.mjs';
+import { seedLocalAdministrator, seedTestCustomer } from './seed-test.mjs';
 import { createChatHandler } from './chat.mjs';
 import { customerOrders } from './orders.mjs';
 import { submitServiceOrder } from './service-orders.mjs';
+import { reportUploadPath } from './admin-actions.mjs';
 import { serveAdmin } from './admin.mjs';
 import { createStaticHandler } from './static.mjs';
 const derive = promisify(scrypt);
@@ -23,10 +28,10 @@ export function createPortalServer(db = openDatabase(), options = {}) {
   const site = options.staticDir ? createStaticHandler(options.staticDir) : null;
   const attempts = new Map();
   const guestAttempts = new Map();
-  const sessionCookie = (res, customerId, seconds) => {
+  const sessionCookie = async (res, customerId, seconds, target = db) => {
     const session = randomBytes(32).toString('hex');
-    db.prepare('DELETE FROM sessions WHERE expires<=?').run(Date.now());
-    db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(hash(session), customerId, Date.now() + seconds * 1000);
+    await target.prepare('DELETE FROM sessions WHERE expires<=?').run(Date.now());
+    await target.prepare('INSERT INTO sessions VALUES(?,?,?)').run(hash(session), customerId, Date.now() + seconds * 1000);
     res.setHeader('Set-Cookie', `hem_session=${session}; HttpOnly; SameSite=Strict; Path=/api; Max-Age=${seconds}${process.env.NODE_ENV==='production'?'; Secure':''}`);
   };
   const dummySalt = randomBytes(16).toString('hex');
@@ -43,11 +48,13 @@ export function createPortalServer(db = openDatabase(), options = {}) {
         // Behind an HTTPS proxy the browser origin is https:// while the request reaches Node as http://.
         const allowed = process.env.APP_ORIGIN ? [process.env.APP_ORIGIN] : [`http://${req.headers.host}`,`https://${req.headers.host}`];
         if (origin && !allowed.includes(origin)) return json(403,{error:'Invalid request origin.'});
-        if (!req.headers['content-type']?.startsWith('application/json')) return json(415,{error:'JSON required.'});
+        const media = req.headers['content-type']?.split(';')[0].trim().toLowerCase();
+        const requiredMedia = reportUploadPath.test(path) ? 'multipart/form-data' : 'application/json';
+        if (media !== requiredMedia) return json(415,{error:'Expected ' + requiredMedia + '.'});
       }
       const token = /(?:^|;\s*)hem_session=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie || '')?.[1];
-      const user = token && db.prepare('SELECT c.id,c.email,c.name,c.company,EXISTS(SELECT 1 FROM administrators a WHERE a.customer_id=c.id) AS isAdmin FROM sessions s JOIN customers c ON c.id=s.customer_id WHERE s.token_hash=? AND s.expires>?').get(hash(token),Date.now());
-      if (path.startsWith('/api/admin/')) return serveAdmin(req,json,db,user && asCustomer(user),url,asCustomer);
+      const user = token && await db.prepare('SELECT c.id,c.email,c.name,c.company,EXISTS(SELECT 1 FROM administrators a WHERE a.customer_id=c.id) AS "isAdmin" FROM sessions s JOIN customers c ON c.id=s.customer_id WHERE s.token_hash=? AND s.expires>?').get(hash(token),Date.now());
+      if (path.startsWith('/api/admin/')) return await serveAdmin(req,res,json,db,user && asCustomer(user),url,asCustomer);
       if (path === '/api/guest-session' && req.method === 'POST') {
         if (user) return json(200, { customer: asCustomer(user) });
         const now = Date.now();
@@ -62,13 +69,14 @@ export function createPortalServer(db = openDatabase(), options = {}) {
         const identifier = randomBytes(16).toString('hex');
         const email = 'guest-' + identifier + '@guest.invalid';
         const name = guestName(identifier);
-        db.exec('BEGIN IMMEDIATE');
         let id;
         try {
-          id = Number(addCustomer(db, email, randomBytes(32).toString('hex'), name, ''));
-          sessionCookie(res, id, 30 * 24 * 60 * 60);
-          db.exec('COMMIT');
-        } catch (error) { db.exec('ROLLBACK'); res.removeHeader('Set-Cookie'); throw error; }
+          id = await transaction(db, async tx => {
+            const customerId = Number(await addCustomer(tx, email, randomBytes(32).toString('hex'), name, ''));
+            await sessionCookie(res, customerId, 30 * 24 * 60 * 60, tx);
+            return customerId;
+          });
+        } catch (error) { res.removeHeader('Set-Cookie'); throw error; }
         return json(201, { customer: asCustomer({ id, email, name, company: '' }) });
       }
       if (path === '/api/service-orders' && req.method === 'POST') return await submitServiceOrder(req,json,db,user && asCustomer(user));
@@ -81,23 +89,23 @@ export function createPortalServer(db = openDatabase(), options = {}) {
         let raw = ''; for await (const chunk of req) { raw += chunk; if (raw.length > 4096) return json(413,{error:'Request too large.'}); }
         let body; try { body=JSON.parse(raw); } catch { return json(400,{error:'Invalid request.'}); }
         if (typeof body?.email !== 'string' || typeof body.password !== 'string' || body.password.length>256) return json(400,{error:'Email and password required.'});
-        const customer = db.prepare('SELECT * FROM customers WHERE email=?').get(body.email.trim().toLowerCase());
+        const customer = await db.prepare('SELECT * FROM customers WHERE email=?').get(body.email.trim().toLowerCase());
         const candidate = await derive(body.password,customer?.salt || dummySalt,64);
         if (!customer || !timingSafeEqual(candidate,Buffer.from(customer.password_hash,'hex'))) return json(401,{error:'Email or password is incorrect.'});
         attempts.delete(ip);
-        sessionCookie(res, customer.id, 8 * 60 * 60);
+        await sessionCookie(res, customer.id, 8 * 60 * 60);
         return json(200,{ok:true});
       }
       if (!user) return json(401,{error:'Please sign in to your client account.'});
       if (path === '/api/logout' && req.method === 'POST') {
-        db.prepare('DELETE FROM sessions WHERE token_hash=?').run(hash(token));
+        await db.prepare('DELETE FROM sessions WHERE token_hash=?').run(hash(token));
         res.setHeader('Set-Cookie',`hem_session=; HttpOnly; SameSite=Strict; Path=/api; Max-Age=0${process.env.NODE_ENV==='production'?'; Secure':''}`);
         return json(200,{ok:true});
       }
-      if (path === '/api/portal' && req.method === 'GET') return json(200,{customer:asCustomer(user),orders:customerOrders(db,user.id),subscriptions:db.prepare('SELECT id,service,plan,status,renewal_date FROM subscriptions WHERE customer_id=?').all(user.id),reports:db.prepare('SELECT id,title,sample_id,analysis,status,issued_at,filename FROM reports WHERE customer_id=? ORDER BY id DESC').all(user.id)});
+      if (path === '/api/portal' && req.method === 'GET') return json(200,{customer:asCustomer(user),orders:await customerOrders(db,user.id),subscriptions:await db.prepare('SELECT id,service,plan,status,renewal_date FROM subscriptions WHERE customer_id=?').all(user.id),reports:await db.prepare('SELECT id,title,sample_id,analysis,status,issued_at,filename FROM reports WHERE customer_id=? ORDER BY id DESC').all(user.id)});
       const match = /^\/api\/reports\/(\d+)\/download$/.exec(path);
       if (match && req.method === 'GET') {
-        const report = db.prepare("SELECT * FROM reports WHERE id=? AND customer_id=? AND status='Ready' AND content IS NOT NULL").get(Number(match[1]),user.id);
+        const report = await db.prepare("SELECT * FROM reports WHERE id=? AND customer_id=? AND status='Ready' AND content IS NOT NULL").get(Number(match[1]),user.id);
         if (!report) return json(404,{error:'Report not available.'});
         res.writeHead(200,{'Content-Type':report.mime || 'application/octet-stream','Content-Disposition':`attachment; filename="${report.filename.replace(/[^a-zA-Z0-9._-]/g,'_')}"`});
         return res.end(Buffer.from(report.content));
@@ -113,8 +121,22 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       if (!process.env[key]?.trim()) process.env[key]=value;
     }
   }
-  const db = openDatabase();
-  if (process.env.NODE_ENV !== 'production') seedTestCustomer(db);
+  // This marker is packaged only for the separately authorized demo deployment.
+  // Demo startup always uses a separate database directory, even if DATA_DIR is set.
+  const demo = existsSync('deploy/pocketbay-demo.enabled');
+  let db;
+  const postgres = Boolean(process.env.DATABASE_URL);
+  const schema = process.env.DATABASE_SCHEMA || 'houstonem_demo';
+  try {
+    db = postgres ? await openPostgres(process.env.DATABASE_URL, schema) : demo ? openDatabase(resolve(process.env.POCKETBAY_DATA_DIR || 'server/data', 'demo')) : openDatabase();
+    if (postgres && process.env.DATABASE_SEED_DEMO === '1') await seedPostgresDemo(db, schema);
+    if (!postgres && (demo || process.env.NODE_ENV !== 'production')) seedTestCustomer(db);
+    if (!postgres && (demo || (process.env.NODE_ENV === 'development' && process.env.HOST === '127.0.0.1'))) seedLocalAdministrator(db);
+  } catch (error) {
+    console.error('Database initialization failed:', error.code || error.name);
+    await db?.close();
+    process.exit(1);
+  }
   // One process serves both the built site and /api. Hosts such as PocketBay set PORT and need 0.0.0.0.
   const port = Number(process.env.PORT || 3001), host = process.env.HOST || '0.0.0.0';
   const server=createPortalServer(db,{staticDir:process.env.STATIC_DIR ?? 'dist/houston-em'});

@@ -16,6 +16,8 @@ test('service orders use catalog pricing, preserve old orders and stay private',
   db.prepare("INSERT INTO products VALUES ('legacy','SKU-1','Accessory','Storage','Historical product','box',2000,3,'box',1,1)").run();
   db.prepare("INSERT INTO orders VALUES ('legacy-order',?,'legacy-key','legacy-hash','Awaiting lab confirmation',2000,'USD','Buyer','buyer@example.com','Historical address','','2026-01-01')").run(buyer);
   db.prepare("INSERT INTO order_items VALUES ('legacy-order','legacy','Accessory','SKU-1',1,2000,1)").run();
+  db.prepare('INSERT INTO subscriptions(customer_id,service,plan,status) VALUES(?,?,?,?)').run(buyer,'EDS','Standard','Active');
+  const report = Number(db.prepare('INSERT INTO reports(customer_id,title,sample_id,analysis,status,filename,content) VALUES(?,?,?,?,?,?,?)').run(buyer,'EDS report','Sample A','EDS','Ready','eds.pdf',Buffer.from('%PDF-test')).lastInsertRowid);
   const staff = addCustomer(db, 'admin@example.com', 'admin-password-123', 'Lab Administrator', 'HEM');
   db.prepare('INSERT INTO administrators VALUES (?)').run(staff);
   const server = createPortalServer(db);
@@ -107,13 +109,72 @@ test('service orders use catalog pricing, preserve old orders and stay private',
     assert.equal((await (await adminGet('orders?customerId=' + buyer, admin)).json()).total, 2);
     assert.equal((await adminGet('orders?customerId=invalid', admin)).status, 400);
     assert.equal((await post('/api/admin/orders', {}, admin)).status, 405);
+    for (const auth of [cookie, guestCookie]) {
+      assert.equal((await adminGet('customers/' + buyer, auth)).status, 403);
+      assert.equal((await adminGet('reports/' + report + '/download', auth)).status, 403);
+    }
+    const record = await (await adminGet('customers/' + buyer, admin)).json();
+    assert.equal(record.customer.id, buyer);
+    assert.equal(record.subscriptions[0].service, 'EDS');
+    assert.equal(record.reports[0].title, 'EDS report');
+    assert.equal(record.reports[0].has_file, 1);
+    assert.equal(record.reports[0].content, undefined);
+    assert.equal(record.orders.length, 2);
+    const download = await adminGet('reports/' + report + '/download', admin);
+    assert.equal(download.status, 200);
+    assert.equal(await download.text(), '%PDF-test');
+    const subscriptionPath = '/api/admin/customers/' + buyer + '/subscriptions';
+    const reportPath = '/api/admin/customers/' + buyer + '/reports';
+    const statusPath = '/api/admin/orders/' + saved.id + '/status';
+    const subscription = { service: 'Micro FT-IR', plan: 'Monthly', renewal_date: '2027-02-28' };
+    const uploadReport = (auth, filename, content) => {
+      const form = new FormData();
+      form.set('title','Published microscopy report');
+      form.set('sample_id','Sample B');
+      form.set('analysis','SEM');
+      form.set('file',new Blob([content],{type:'application/pdf'}),filename);
+      return fetch(base + reportPath, { method:'POST', headers:auth ? { Cookie:auth } : {}, body:form });
+    };
+    for (const auth of [undefined, cookie, guestCookie]) {
+      const expected = auth ? 403 : 401;
+      assert.equal((await post(subscriptionPath, subscription, auth)).status, expected);
+      assert.equal((await uploadReport(auth, 'report.pdf', '%PDF-test')).status, expected);
+      assert.equal((await post(statusPath, {status:'Cancelled'}, auth)).status, expected);
+    }
+    assert.equal((await post(subscriptionPath, subscription, admin, { Origin: 'https://elsewhere.example' })).status, 403);
+    assert.equal((await post(subscriptionPath, {...subscription,renewal_date:'2027-02-30'}, admin)).status, 400);
+    assert.equal((await post('/api/admin/customers/999999/subscriptions', subscription, admin)).status, 404);
+    const added = await post(subscriptionPath, subscription, admin);
+    assert.equal(added.status, 201);
+    const subscriptionId = (await added.json()).id;
+    assert.equal((await uploadReport(admin, 'fake.pdf', 'not a PDF')).status, 400);
+    const published = await uploadReport(admin, 'customer report.pdf', '%PDF-published');
+    assert.equal(published.status, 201);
+    const publishedId = (await published.json()).id;
+    assert.equal((await post(statusPath, {status:'Fulfilled'}, admin)).status, 409);
+    assert.equal((await post(statusPath, {status:'Confirmed - awaiting payment'}, admin)).status, 200);
+    const updated = await portal(cookie);
+    assert.ok(updated.subscriptions.some(s => s.id === subscriptionId && s.renewal_date === subscription.renewal_date));
+    assert.ok(updated.reports.some(r => r.id === publishedId && r.status === 'Ready'));
+    assert.equal(updated.orders.find(o => o.id === saved.id).status, 'Confirmed - awaiting payment');
+    for (const auth of [other, guestCookie]) {
+      const isolated = await portal(auth);
+      assert.ok(!isolated.subscriptions.some(s => s.id === subscriptionId));
+      assert.ok(!isolated.reports.some(r => r.id === publishedId));
+      assert.ok(!isolated.orders.some(o => o.id === saved.id));
+      assert.equal((await fetch(base + '/api/reports/' + publishedId + '/download', {headers:{Cookie:auth}})).status,404);
+    }
+    const publishedDownload = await fetch(base + '/api/reports/' + publishedId + '/download', {headers:{Cookie:cookie}});
+    assert.equal(publishedDownload.status,200);
+    assert.equal(await publishedDownload.text(),'%PDF-published');
+
     db.prepare('DELETE FROM administrators WHERE customer_id=?').run(staff);
     assert.equal((await adminGet('orders', admin)).status, 403);
 
-    updateOrderStatus(db, saved.id, 'Confirmed - awaiting payment');
+    await updateOrderStatus(db, saved.id, 'Confirmed - awaiting payment');
     assert.equal((await portal(cookie)).orders.find(o => o.id === saved.id).status, 'Confirmed - awaiting payment');
-    updateOrderStatus(db, 'legacy-order', 'Cancelled');
-    updateOrderStatus(db, 'legacy-order', 'Cancelled');
+    await updateOrderStatus(db, 'legacy-order', 'Cancelled');
+    await updateOrderStatus(db, 'legacy-order', 'Cancelled');
     assert.equal(db.prepare("SELECT stock FROM products WHERE id='legacy'").get().stock, 4);
   } finally {
     await new Promise(resolve => server.close(resolve));
