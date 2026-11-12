@@ -5,14 +5,22 @@ Requires Node.js 24+ and installed frontend dependencies (`npm install`).
 
 ## Development
 
-Run in two terminals:
+One command starts both the Angular dev server and the API:
 
 ```sh
-npm run api
 npm run dev
 ```
 
-Open http://localhost:3000. Angular proxies `/api` to port 3001. Restart an existing Angular development server after changing proxy configuration. The portal is at `/portal`.
+Open http://localhost:3000. Angular proxies `/api` to the API on port 3001. Restart the development server after changing proxy configuration. The portal is at `/portal`.
+
+## Production
+
+```sh
+npm run build
+npm start
+```
+
+`npm start` runs one Node process that serves the built site from `dist/houston-em` and the `/api` endpoints on the same port. It listens on `PORT` (default 3001) and `HOST` (default `0.0.0.0`), runs with `NODE_ENV=production` (no test account, secure cookies), and stores SQLite in `DATA_DIR`, else `POCKETBAY_DATA_DIR`, else `server/data`.
 
 SQLite is initialized automatically at `server/data/portal.sqlite`. Set `DATA_DIR` to change its directory. Private reports are stored as BLOBs in SQLite and are never served from the public folder. Back up the database using SQLite's backup tools (including WAL handling); do not copy a live database file alone.
 
@@ -56,7 +64,6 @@ The floating assistant calls the backend `POST /api/chat`, which uses the local 
 ollama serve
 # In another terminal, if the model is not already installed:
 ollama pull llama3.2
-npm run api
 npm run dev
 ```
 
@@ -87,7 +94,7 @@ Sample-based estimates multiply the proposed rate by the selected quantity. The 
 
 Open a service detail, set the sample quantity if applicable, and select **Order this service**. A signed-in client supplies a contact email and sample/testing notes. The server calculates the estimate using the same catalog pricing as the frontend and records a price snapshot in SQLite. The order starts as **Awaiting lab confirmation** and appears under **My orders** in the Client Portal. The lab confirms the scope, quote and payment offline. No online payment or automatic email is sent. Project prices use a quantity of one; included SEM preparation is not a standalone order.
 
-The `/shop` URL redirects to `/services`. Existing accessory orders remain visible for their owners and can still be managed; new accessory orders are no longer accepted. After updating the code, restart `npm run api` so the service-order table is created in the existing database.
+The `/shop` URL redirects to `/services`. Existing accessory orders remain visible for their owners and can still be managed; new accessory orders are no longer accepted. After updating the code, restart the server (`npm run dev` or `npm start`) so the service-order table is created in the existing database.
 
 ```sh
 npm run portal:manage -- orders

@@ -3,7 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { randomBytes, scryptSync } from 'node:crypto';
-export function openDatabase(directory = process.env.DATA_DIR || resolve('server/data')) {
+export function openDatabase(directory = process.env.DATA_DIR || process.env.POCKETBAY_DATA_DIR || resolve('server/data')) {
   mkdirSync(directory, { recursive: true, mode: 0o700 });
   const db = new DatabaseSync(resolve(directory, 'portal.sqlite'));
   db.exec(`PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL;
