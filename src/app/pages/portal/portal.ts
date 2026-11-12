@@ -1,9 +1,11 @@
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, signal, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { SERVICES } from '../../data/site.data';
+import { quoteSampleCount } from '../../data/service-pricing';
 interface PortalData {
   customer: { name: string; company: string; email: string };
-  orders: {id:string;status:string;subtotal_cents:number;created_at:string;items:{name:string;quantity:number;price_cents:number;demo:number}[]}[];
+  orders: {id:string;status:string;subtotal_cents:number;created_at:string;items:{name:string;quantity:number;price_cents:number;demo:number;unit?:string|null}[]}[];
   subscriptions: { id: number; service: string; plan: string; status: string; renewal_date: string | null }[];
   reports: { id: number; title: string; sample_id: string; analysis: string; status: string; issued_at: string | null; filename: string | null }[];
 }
@@ -19,12 +21,13 @@ interface PortalData {
         <button class="btn btn-primary" type="submit" [disabled]="busy()">{{busy() ? 'Signing in…' : 'Sign in to your workspace'}} <span>→</span></button><div class="login-note">Account or password assistance?<br><a href="mailto:LAB@houstonem.com">Contact LAB&#64;houstonem.com</a></div></form></div>
       } @else { @if (data(); as portal) {
         <div class="dashboard-head"><div><span class="eyebrow">CLIENT WORKSPACE</span><h1>Welcome, {{portal.customer.name}}.</h1><p>{{portal.customer.company}} · {{portal.customer.email}}</p></div><button type="button" class="btn btn-outline" (click)="logout()" [disabled]="busy()">Sign out ↗</button></div>
+        @if (returnService) { <a class="btn btn-primary" [routerLink]="['/services', returnService, 'order']" [queryParams]="{ samples: returnSamples }">Continue to service order ↗</a> }
         @if(error()){<p class="error" role="alert">{{error()}}</p>}
         <div class="stats"><div><span>Subscribed services</span><strong>{{portal.subscriptions.length}}</strong></div><div><span>Available reports</span><strong>{{readyReports()}}</strong></div><div><span>Laboratory support</span><a href="mailto:LAB@houstonem.com">Contact your expert ↗</a></div></div>
         <div class="workspace"><aside><span class="eyebrow">YOUR SERVICES</span><h2>Subscriptions</h2>@for(service of portal.subscriptions; track service.id){<article class="subscription"><span class="status">{{service.status}}</span><h3>{{service.service}}</h3><p>{{service.plan}}</p><small>{{service.renewal_date ? 'Renewal: '+service.renewal_date : 'Contact your lab for scheduling'}}</small></article>} @empty {<p class="empty">No services subscribed yet. Contact our team to arrange analysis for your project.</p>}<a class="text-link" href="mailto:LAB@houstonem.com">Discuss another service ↗</a></aside>
         <section class="reports"><div class="reports-head"><div><span class="eyebrow">DOCUMENT LIBRARY</span><h2>Analysis reports</h2></div><label class="search"><span class="sr-only">Search reports</span><input type="search" placeholder="Search title, sample or analysis…" [(ngModel)]="query"></label></div><div class="table-scroll"><table><thead><tr><th>Report / sample</th><th>Analysis</th><th>Date</th><th>Status</th><th><span class="sr-only">Download</span></th></tr></thead><tbody>@for(report of filteredReports(); track report.id){<tr><td><strong>{{report.title}}</strong><small>{{report.sample_id}}</small></td><td>{{report.analysis}}</td><td>{{report.issued_at || '—'}}</td><td><span class="status" [class.pending]="report.status!=='Ready'">{{report.status}}</span></td><td>@if(report.status==='Ready' && report.filename){<button class="download" [disabled]="downloading()===report.id" (click)="download(report.id, report.filename)">{{downloading()===report.id ? 'Downloading…' : 'PDF ↓'}}</button>} @else {<span>—</span>}</td></tr>} @empty {<tr><td colspan="5" class="empty">{{query ? 'No reports match your search.' : 'Your reports will appear here when your laboratory publishes them.'}}</td></tr>}</tbody></table></div></section></div>
-        <section class="orders"><div class="reports-head"><div><span class="eyebrow">ACCESSORY SHOP</span><h2>My orders</h2></div><a class="text-link" routerLink="/shop">Browse accessories ↗</a></div><p class="order-note">Order requests await laboratory confirmation of pricing, delivery and payment. No online payment is collected.</p>
-        @for(order of portal.orders;track order.id){<article class="order"><div><span class="status pending">{{order.status}}</span><small>{{order.created_at.slice(0,10)}}</small></div><code>{{order.id}}</code><ul>@for(item of order.items;track $index){<li><span>{{item.name}} × {{item.quantity}} @if(item.demo){<small>Demo item</small>}</span><strong>{{money(item.price_cents*item.quantity)}}</strong></li>}</ul><div class="order-total"><span>Estimated subtotal · USD</span><strong>{{money(order.subtotal_cents)}}</strong></div></article>}@empty{<p class="empty">No orders yet. Browse the shop to request laboratory accessories.</p>}</section>
+        <section class="orders"><div class="reports-head"><div><span class="eyebrow">LABORATORY SERVICES</span><h2>My orders</h2></div><a class="text-link" routerLink="/services">Browse services ↗</a></div><p class="order-note">Order requests await laboratory confirmation of pricing, delivery and payment. No online payment is collected.</p>
+        @for(order of portal.orders;track order.id){<article class="order"><div><span class="status pending">{{order.status}}</span><small>{{order.created_at.slice(0,10)}}</small></div><code>{{order.id}}</code><ul>@for(item of order.items;track $index){<li><span>{{item.name}} × {{item.quantity}} @if(item.unit){<small>{{ item.unit }}{{ item.quantity === 1 ? '' : 's' }}</small>} @if(item.demo){<small>Demo item</small>}</span><strong>{{money(item.price_cents*item.quantity)}}</strong></li>}</ul><div class="order-total"><span>Estimated subtotal · USD</span><strong>{{money(order.subtotal_cents)}}</strong></div></article>}@empty{<p class="empty">No orders yet. Browse the service catalog to place an order.</p>}</section>
       }}
     </div></section>
   `,
@@ -34,6 +37,9 @@ interface PortalData {
   `,
 })
 export class PortalPage implements OnInit {
+  private readonly route = inject(ActivatedRoute);
+  protected readonly returnService = SERVICES.find(service => service.slug === this.route.snapshot.queryParamMap.get('orderService'))?.slug;
+  protected readonly returnSamples = quoteSampleCount(this.route.snapshot.queryParamMap.get('samples'));
   protected readonly loading=signal(true); protected readonly busy=signal(false); protected readonly error=signal('');
   protected readonly data=signal<PortalData|null>(null); protected readonly downloading=signal<number|null>(null);
   protected email=''; protected password=''; protected query='';

@@ -1,4 +1,4 @@
-import { initializeShop } from './shop.mjs';
+import { initializeOrders } from './orders.mjs';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -13,7 +13,7 @@ export function openDatabase(directory = process.env.DATA_DIR || resolve('server
     CREATE TABLE IF NOT EXISTS reports(id INTEGER PRIMARY KEY, customer_id INTEGER NOT NULL REFERENCES customers(id), title TEXT NOT NULL, sample_id TEXT NOT NULL, analysis TEXT NOT NULL, status TEXT NOT NULL, issued_at TEXT, filename TEXT, mime TEXT, content BLOB);
     CREATE INDEX IF NOT EXISTS reports_customer ON reports(customer_id);
     CREATE INDEX IF NOT EXISTS subscriptions_customer ON subscriptions(customer_id);`);
-  initializeShop(db);
+  initializeOrders(db);
   return db;
 }
 export function addCustomer(db, email, password, name, company) {

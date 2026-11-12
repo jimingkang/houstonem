@@ -1,13 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { openDatabase, addCustomer } from './db.mjs';
-import { updateOrderStatus } from './shop.mjs';
+import { orderItems, updateOrderStatus } from './orders.mjs';
 const db=openDatabase();
 const [command,...args]=process.argv.slice(2);
 try {
   if(command==='orders') {
     const orders=db.prepare('SELECT o.*,c.company FROM orders o JOIN customers c ON c.id=o.customer_id ORDER BY created_at DESC').all();
-    for(const order of orders) console.log(JSON.stringify({...order,items:db.prepare('SELECT name,sku,quantity,price_cents,demo FROM order_items WHERE order_id=?').all(order.id)}));
+    for(const order of orders) console.log(JSON.stringify({...order,items:orderItems(db,order.id)}));
   } else if(command==='order-status') {
     if(args.length!==2) throw Error('Usage: order-status HEM-order-id "Confirmed - awaiting payment|Cancelled|Fulfilled"');
     updateOrderStatus(db,args[0],args[1]);console.log('Order status updated.');

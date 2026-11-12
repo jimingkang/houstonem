@@ -77,24 +77,24 @@ Hosted-provider keys are unused and have been removed from the local configurati
 
 Tests use mocked Ollama responses and need no installed model. They cover request format, conversation history, account isolation, validation, timeouts, missing models and rate limits.
 
-## Accessory shop
+## Laboratory services and estimates
 
-`/shop` provides a searchable, categorized sample accessory catalog, a browser-saved cart and a signed-in order request form. SQLite stores products, order headers and item snapshots. In local development the API seeds six demo products once, using `INSERT OR IGNORE`; restarting does not reset inventory. Production does not seed demo products automatically.
+`/services` organizes the laboratory's catalog by testing category and supports keyword search. Each service detail includes sample guidance, expected deliverables and a proposed starting price in USD per sample or project. Rates are illustrative and centrally maintained in `src/app/data/service-pricing.ts`; verify them with the laboratory before publishing as approved prices. Gold sputtering is included when appropriate for an eligible SEM project.
 
-All seeded products, availability and USD prices are illustrative. Submitting an order creates an **Awaiting lab confirmation** request and reserves its quantities. The displayed subtotal excludes shipping/tax and is not a final quote. There is no automatic payment, Stripe integration or automated email; laboratory staff must review the saved requests and confirm pricing/payment offline. Customers see only their own orders in `/portal`.
+Sample-based estimates multiply the proposed rate by the selected quantity. The quote link carries the service and quantity into the contact form, where the customer can add sample and project details and open an email draft for laboratory review. The site does not send the email or issue a binding quote automatically.
 
-The backend calculates totals from the database, validates stock and quantities, stores item/price snapshots, and uses a transaction plus a per-customer request ID to prevent duplicate orders and overselling. Contact/shipping data is kept server-side; only the non-personal cart is stored in localStorage. The order list contains no shipping address.
+### Ordering a service
 
-For this initial version catalog changes and order fulfillment are managed with the SQLite database by laboratory staff; there is no admin web interface. Products have `active`, `stock`, `price_cents`, `demo`, category and description fields. `orders` contains the contact/address/notes for manual follow-up. The management CLI releases reserved stock transactionally on cancellation and prevents cancelling twice from returning stock twice. Before launch, replace demo products/prices and implement an approved fulfillment workflow.
+Open a service detail, set the sample quantity if applicable, and select **Order this service**. A signed-in client supplies a contact email and sample/testing notes. The server calculates the estimate using the same catalog pricing as the frontend and records a price snapshot in SQLite. The order starts as **Awaiting lab confirmation** and appears under **My orders** in the Client Portal. The lab confirms the scope, quote and payment offline. No online payment or automatic email is sent. Project prices use a quantity of one; included SEM preparation is not a standalone order.
 
-Laboratory order review (local administrative terminal only):
+The `/shop` URL redirects to `/services`. Existing accessory orders remain visible for their owners and can still be managed; new accessory orders are no longer accepted. After updating the code, restart `npm run api` so the service-order table is created in the existing database.
 
 ```sh
 npm run portal:manage -- orders
 npm run portal:manage -- order-status HEM-order-id "Confirmed - awaiting payment"
 npm run portal:manage -- order-status HEM-order-id "Fulfilled"
-# Or cancel a pending/confirmed request and release its reserved quantities:
+# Or cancel a pending or confirmed order:
 npm run portal:manage -- order-status HEM-order-id "Cancelled"
 ```
 
-Only mark fulfilled after manual payment/fulfillment checks. Status changes do not charge a card or send an email.
+Only mark an order fulfilled after manual payment and fulfillment checks. Cancelling a historical accessory order still releases its reserved stock.

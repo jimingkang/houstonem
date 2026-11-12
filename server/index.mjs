@@ -6,7 +6,8 @@ import { pathToFileURL } from 'node:url';
 import { openDatabase } from './db.mjs';
 import { seedTestCustomer } from './seed-test.mjs';
 import { createChatHandler } from './chat.mjs';
-import { handleShop, seedDemoProducts, customerOrders } from './shop.mjs';
+import { customerOrders } from './orders.mjs';
+import { submitServiceOrder } from './service-orders.mjs';
 const derive = promisify(scrypt);
 const hash = value => createHash('sha256').update(value).digest('hex');
 export function createPortalServer(db = openDatabase(), options = {}) {
@@ -26,7 +27,7 @@ export function createPortalServer(db = openDatabase(), options = {}) {
       }
       const token = /(?:^|;\s*)hem_session=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie || '')?.[1];
       const user = token && db.prepare('SELECT c.id,c.email,c.name,c.company FROM sessions s JOIN customers c ON c.id=s.customer_id WHERE s.token_hash=? AND s.expires>?').get(hash(token),Date.now());
-      if (path.startsWith('/api/shop/') && await handleShop(req,json,db,user,path)) return;
+      if (path === '/api/service-orders' && req.method === 'POST') return await submitServiceOrder(req,json,db,user);
       if (path === '/api/chat' && req.method === 'POST') return await chat(req,json,db,user);
       if (path === '/api/login' && req.method === 'POST') {
         const ip = req.socket.remoteAddress;
@@ -72,6 +73,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     }
   }
   const db = openDatabase();
-  if (process.env.NODE_ENV !== 'production') { seedTestCustomer(db); seedDemoProducts(db); }
+  if (process.env.NODE_ENV !== 'production') seedTestCustomer(db);
   const server=createPortalServer(db); server.listen(Number(process.env.PORT || 3001),'127.0.0.1',()=>console.log('Portal API listening on http://127.0.0.1:'+ (process.env.PORT || 3001)));
 }
