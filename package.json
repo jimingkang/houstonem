@@ -5,10 +5,9 @@
   "packageManager": "pnpm@12.3.4",
   "scripts": {
     "ng": "ng",
-    "dev": "ng serve",
-    "start": "ng serve",
+    "dev": "node server/dev.mjs",
+    "start": "NODE_ENV=production node server/index.mjs",
     "build": "ng build",
-    "api": "node --env-file-if-exists=.env.local server/index.mjs",
     "portal:manage": "node server/manage.mjs",
     "test:api": "node --test server/*.test.mjs"
   },
@@ -27,5 +26,8 @@
     "@angular/cli": "^22.2.5",
     "@angular/compiler-cli": "^22.2.0",
     "typescript": "~6.0.2"
+  },
+  "engines": {
+    "node": ">=22.18"
   }
 }

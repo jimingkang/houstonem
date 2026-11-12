@@ -8,10 +8,12 @@ import { seedTestCustomer } from './seed-test.mjs';
 import { createChatHandler } from './chat.mjs';
 import { customerOrders } from './orders.mjs';
 import { submitServiceOrder } from './service-orders.mjs';
+import { createStaticHandler } from './static.mjs';
 const derive = promisify(scrypt);
 const hash = value => createHash('sha256').update(value).digest('hex');
 export function createPortalServer(db = openDatabase(), options = {}) {
   const chat = createChatHandler(options.chat);
+  const site = options.staticDir ? createStaticHandler(options.staticDir) : null;
   const attempts = new Map();
   const dummySalt = randomBytes(16).toString('hex');
   return createServer(async (req, res) => {
@@ -20,9 +22,12 @@ export function createPortalServer(db = openDatabase(), options = {}) {
     const json = (status, body) => { res.writeHead(status, {'Content-Type':'application/json'}); res.end(JSON.stringify(body)); };
     try {
       const path = new URL(req.url, 'http://localhost').pathname;
+      if (site && path !== '/api' && !path.startsWith('/api/')) return site(req,res,path);
       if (req.method === 'POST') {
         const origin = req.headers.origin;
-        if (origin && origin !== (process.env.APP_ORIGIN || `http://${req.headers.host}`)) return json(403,{error:'Invalid request origin.'});
+        // Behind an HTTPS proxy the browser origin is https:// while the request reaches Node as http://.
+        const allowed = process.env.APP_ORIGIN ? [process.env.APP_ORIGIN] : [`http://${req.headers.host}`,`https://${req.headers.host}`];
+        if (origin && !allowed.includes(origin)) return json(403,{error:'Invalid request origin.'});
         if (!req.headers['content-type']?.startsWith('application/json')) return json(415,{error:'JSON required.'});
       }
       const token = /(?:^|;\s*)hem_session=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie || '')?.[1];
@@ -74,5 +79,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   }
   const db = openDatabase();
   if (process.env.NODE_ENV !== 'production') seedTestCustomer(db);
-  const server=createPortalServer(db); server.listen(Number(process.env.PORT || 3001),'127.0.0.1',()=>console.log('Portal API listening on http://127.0.0.1:'+ (process.env.PORT || 3001)));
+  // One process serves both the built site and /api. Hosts such as PocketBay set PORT and need 0.0.0.0.
+  const port = Number(process.env.PORT || 3001), host = process.env.HOST || '0.0.0.0';
+  const server=createPortalServer(db,{staticDir:process.env.STATIC_DIR ?? 'dist/houston-em'});
+  server.listen(port,host,()=>console.log(`Houston EM site and API listening on http://${host}:${port}`));
 }
