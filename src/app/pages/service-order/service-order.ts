@@ -37,18 +37,14 @@ import { SERVICE_PRICING, MAX_QUOTE_SAMPLES, quoteSampleCount } from '../../data
               <div class="card">
                 @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
                 @if (loading()) { <p role="status">Preparing your request…</p> }
-                @else if (!signedIn()) {
-                  <h2>Continue your request</h2><p>Try again as a guest or sign in with an existing account.</p>
-                  <button type="button" class="btn btn-outline" (click)="prepareCheckout()">Continue as guest</button>
-                  <a routerLink="/portal" [queryParams]="{ orderService: entry.slug, samples: quantity() }" class="btn btn-primary">Sign in to Client Portal ↗</a>
-                } @else {
+                @else {
                   <form #orderForm="ngForm" (ngSubmit)="submit()">
                     <h2>Tell us about your samples</h2>
-                    @if (guest()) { <p class="note">We'll create your Client Portal account with these details, so you can sign in later to follow this request and download reports.</p>
+                    @if (newVisitor()) { <p class="note">We'll create your Client Portal account with these details. Sign in there to follow this request, order the service once we've sent your quote, and download reports. Already have an account? <a routerLink="/portal" [queryParams]="{ orderService: entry.slug, samples: quantity() }">Sign in first ↗</a></p>
                       <label>Your name<input name="name" autocomplete="name" maxlength="120" required [(ngModel)]="name" [disabled]="busy()"></label>
                       <label>Company (optional)<input name="company" autocomplete="organization" maxlength="160" [(ngModel)]="company" [disabled]="busy()"></label> }
                     <label>Contact email<input type="email" email name="email" autocomplete="email" maxlength="254" required [(ngModel)]="email" [disabled]="busy()"></label>
-                    @if (guest()) { <label>Create a password<input type="password" name="password" autocomplete="new-password" minlength="8" maxlength="256" required [(ngModel)]="password" [disabled]="busy()"></label> }
+                    @if (newVisitor()) { <label>Create a password<input type="password" name="password" autocomplete="new-password" minlength="8" maxlength="256" required [(ngModel)]="password" [disabled]="busy()"></label> }
                     <label>Sample and testing details<textarea name="notes" rows="5" minlength="10" maxlength="1500" required [(ngModel)]="notes" [disabled]="busy()" placeholder="Material, areas of interest, testing goals, and deadline"></textarea></label>
                     <button class="btn btn-primary" type="submit" [disabled]="busy() || orderForm.invalid || notes.trim().length < 10">{{ busy() ? 'Submitting…' : 'Request a quote' }} ↗</button>
                   </form>
@@ -71,8 +67,8 @@ export class ServiceOrderPage {
   protected readonly price = computed(() => this.service() && SERVICE_PRICING[this.slug()]);
   protected readonly quantity = computed(() => this.price()?.unit === 'sample' ? quoteSampleCount(this.route.snapshot.queryParamMap.get('samples')) : 1);
   protected readonly loading = signal(true);
-  protected readonly signedIn = signal(false);
-  protected readonly guest = signal('');
+  /** True when nobody is signed in: the quote request then also creates the customer's account. */
+  protected readonly newVisitor = signal(true);
   protected readonly busy = signal(false);
   protected readonly error = signal('');
   protected readonly receipt = signal<{id:string;status:string} | null>(null);
@@ -84,41 +80,34 @@ export class ServiceOrderPage {
   protected notes = '';
   private request: { signature: string; id: string } | undefined;
 
-  ngOnInit() {
-    if (this.price()?.startingUsd != null) void this.prepareCheckout();
-  }
-
-  protected async prepareCheckout() {
-    this.loading.set(true);
-    this.error.set('');
+  async ngOnInit() {
     try {
-      const response = await fetch('/api/guest-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Unable to prepare checkout.');
-      this.guest.set(result.customer.guest ? result.customer.name : '');
-      if (!result.customer.guest && !this.email && result.customer.email.includes('@')) this.email = result.customer.email;
-      this.signedIn.set(true);
-    } catch (error) { this.error.set(error instanceof Error ? error.message : 'Unable to prepare checkout.'); }
+      const response = await fetch('/api/portal');
+      if (response.ok) {
+        const { customer } = await response.json();
+        this.newVisitor.set(false);
+        if (!this.email) this.email = customer.email;
+      }
+    } catch { /* treat as a new visitor */ }
     finally { this.loading.set(false); }
   }
 
   protected async submit() {
-    if (this.busy() || !this.signedIn() || !this.price()?.startingUsd || this.receipt()) return;
+    if (this.busy() || !this.price()?.startingUsd || this.receipt()) return;
     const details = { service: this.slug(), quantity: this.quantity(), email: this.email.trim(), notes: this.notes.trim() };
     if (details.notes.length < 10 || details.notes.length > 1500 || details.quantity > MAX_QUOTE_SAMPLES) return;
-    const account = this.guest() ? { name: this.name.trim(), company: this.company.trim(), password: this.password } : {};
-    if (this.guest() && (!account.name || (account.password ?? '').length < 8)) return;
+    const account = this.newVisitor() ? { name: this.name.trim(), company: this.company.trim(), password: this.password } : {};
+    if (this.newVisitor() && (!account.name || (account.password ?? '').length < 8)) return;
     const signature = JSON.stringify(details);
     if (this.request?.signature !== signature) this.request = { signature, id: crypto.randomUUID() };
     this.busy.set(true);
     this.error.set('');
     try {
       const response = await fetch('/api/service-orders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...details, ...account, requestId: this.request.id }) });
-      if (response.status === 401) this.signedIn.set(false);
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Unable to submit the order.');
       this.receipt.set(result.order);
-      if (result.account) { this.account.set(result.account); this.guest.set(''); this.password = ''; }
+      if (result.account) { this.account.set(result.account); this.newVisitor.set(false); this.password = ''; }
     } catch (error) { this.error.set(error instanceof Error ? error.message : 'Unable to submit the order.'); }
     finally { this.busy.set(false); }
   }

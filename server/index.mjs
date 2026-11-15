@@ -17,17 +17,24 @@ import { serveAdmin } from './admin.mjs';
 import { createStaticHandler } from './static.mjs';
 const derive = promisify(scrypt);
 const hash = value => createHash('sha256').update(value).digest('hex');
-const guestIdentity = /^guest-([a-f0-9]{32})@guest\.invalid$/;
-const guestName = identifier => 'Guest-' + identifier.slice(0, 8).toUpperCase();
 function asCustomer(user) {
-  const guest = guestIdentity.exec(user.email);
-  return { ...user, name: guest ? guestName(guest[1]) : user.name, guest: Boolean(guest), isAdmin: !guest && Boolean(user.isAdmin) };
+  return { ...user, isAdmin: Boolean(user.isAdmin) };
 }
 export function createPortalServer(db = openDatabase(), options = {}) {
   const chat = createChatHandler(options.chat);
   const site = options.staticDir ? createStaticHandler(options.staticDir) : null;
   const attempts = new Map();
-  const guestAttempts = new Map();
+  // Limits how many new accounts one address can open through quote requests.
+  const signupAttempts = new Map();
+  const allowSignup = ip => {
+    const now = Date.now();
+    for (const [key, limit] of signupAttempts) if (limit.until <= now) signupAttempts.delete(key);
+    const limit = signupAttempts.get(ip) || { count: 0, until: now + 900000 };
+    if (limit.count >= 20 || (!signupAttempts.has(ip) && signupAttempts.size >= 4096)) return false;
+    limit.count++;
+    signupAttempts.set(ip, limit);
+    return true;
+  };
   const sessionCookie = async (res, customerId, seconds, target = db) => {
     const session = randomBytes(32).toString('hex');
     await target.prepare('DELETE FROM sessions WHERE expires<=?').run(Date.now());
@@ -55,31 +62,7 @@ export function createPortalServer(db = openDatabase(), options = {}) {
       const token = /(?:^|;\s*)hem_session=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie || '')?.[1];
       const user = token && await db.prepare('SELECT c.id,c.email,c.name,c.company,EXISTS(SELECT 1 FROM administrators a WHERE a.customer_id=c.id) AS "isAdmin" FROM sessions s JOIN customers c ON c.id=s.customer_id WHERE s.token_hash=? AND s.expires>?').get(hash(token),Date.now());
       if (path.startsWith('/api/admin/')) return await serveAdmin(req,res,json,db,user && asCustomer(user),url,asCustomer);
-      if (path === '/api/guest-session' && req.method === 'POST') {
-        if (user) return json(200, { customer: asCustomer(user) });
-        const now = Date.now();
-        for (const [key, limit] of guestAttempts) if (limit.until <= now) guestAttempts.delete(key);
-        const ip = req.socket.remoteAddress;
-        const limit = guestAttempts.get(ip) || { count: 0, until: now + 900000 };
-        if (limit.count >= 20 || (!guestAttempts.has(ip) && guestAttempts.size >= 4096)) {
-          return json(429, { error: 'Too many guest sessions. Please try again later or sign in.' });
-        }
-        limit.count++;
-        guestAttempts.set(ip, limit);
-        const identifier = randomBytes(16).toString('hex');
-        const email = 'guest-' + identifier + '@guest.invalid';
-        const name = guestName(identifier);
-        let id;
-        try {
-          id = await transaction(db, async tx => {
-            const customerId = Number(await addCustomer(tx, email, randomBytes(32).toString('hex'), name, ''));
-            await sessionCookie(res, customerId, 30 * 24 * 60 * 60, tx);
-            return customerId;
-          });
-        } catch (error) { res.removeHeader('Set-Cookie'); throw error; }
-        return json(201, { customer: asCustomer({ id, email, name, company: '' }) });
-      }
-      if (path === '/api/service-orders' && req.method === 'POST') return await submitServiceOrder(req,json,db,user && asCustomer(user));
+      if (path === '/api/service-orders' && req.method === 'POST') return await submitServiceOrder(req,json,db,user && asCustomer(user),{ allowSignup: () => allowSignup(req.socket.remoteAddress), startSession: (customerId, tx) => sessionCookie(res, customerId, 8 * 60 * 60, tx), clearSession: () => res.removeHeader('Set-Cookie') });
       if (path === '/api/chat' && req.method === 'POST') return await chat(req,json,db,user);
       if (path === '/api/login' && req.method === 'POST') {
         const ip = req.socket.remoteAddress;

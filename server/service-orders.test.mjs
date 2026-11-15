@@ -32,7 +32,6 @@ test('service quote requests keep internal estimates, hide prices, preserve old 
   };
   const portal = async cookie => (await fetch(base + '/api/portal', { headers: { Cookie: cookie } })).json();
   try {
-    assert.equal((await post('/api/service-orders', order())).status, 401);
     const cookie = await signIn('buyer@example.com', 'buyer-password-123');
     assert.equal((await post('/api/shop/orders', {}, cookie)).status, 404);
     assert.equal((await post('/api/service-orders', order(), cookie, { Origin: 'https://elsewhere.example' })).status, 403);
@@ -59,52 +58,32 @@ test('service quote requests keep internal estimates, hide prices, preserve old 
     assert.ok(!JSON.stringify(history.orders).includes('_cents'), 'portal must not expose prices');
     const other = await signIn('other@example.com', 'other-password-123');
     assert.deepEqual((await portal(other)).orders, []);
-    const kept = await post('/api/guest-session', {}, cookie);
-    assert.equal(kept.status, 200);
-    assert.equal(kept.headers.get('set-cookie'), null);
-    assert.equal((await kept.json()).customer.id, buyer);
-    assert.equal((await post('/api/guest-session', {}, null, { Origin: 'https://elsewhere.example' })).status, 403);
-    const guest = await post('/api/guest-session', { email: 'buyer@example.com' });
-    assert.equal(guest.status, 201);
-    assert.match(guest.headers.get('set-cookie'), /HttpOnly; SameSite=Strict; Path=\/api; Max-Age=2592000/);
-    const guestCookie = guest.headers.get('set-cookie').split(';')[0];
-    const { customer: guestCustomer } = await guest.json();
-    assert.equal(guestCustomer.guest, true);
-    assert.match(guestCustomer.name, /^Guest-[0-9A-F]{8}$/);
-    assert.equal(db.prepare('SELECT name FROM customers WHERE id=?').get(guestCustomer.id).name, guestCustomer.name);
-    assert.notEqual(guestCustomer.id, buyer);
-    assert.match(guestCustomer.email, /^guest-[a-f0-9]{32}@guest\.invalid$/);
-    const reused = await post('/api/guest-session', {}, guestCookie);
-    assert.equal(reused.status, 200);
-    const reusedCustomer = (await reused.json()).customer;
-    assert.equal(reusedCustomer.id, guestCustomer.id);
-    assert.equal(reusedCustomer.name, guestCustomer.name);
-    db.prepare('UPDATE customers SET name=? WHERE id=?').run('Guest customer', guestCustomer.id);
-    assert.equal((await portal(guestCookie)).customer.name, guestCustomer.name);
-    assert.deepEqual((await portal(guestCookie)).orders, []);
-    // A guest's quote request creates their Client Portal account under the contact email.
+    assert.equal((await post('/api/guest-session', {})).status, 401, 'guest accounts no longer exist');
+
+    // A visitor without an account requests a quote; that creates their Client Portal account.
     const newClient = { name: 'New Client', company: 'Client Co', password: 'client-password-123' };
-    assert.equal((await post('/api/service-orders', order(), guestCookie)).status, 400, 'guests must give a name and password');
-    assert.equal((await post('/api/service-orders', { ...order(), ...newClient, password: 'short' }, guestCookie)).status, 400);
-    const taken = await post('/api/service-orders', { ...order(), ...newClient }, guestCookie);
-    assert.equal(taken.status, 409, 'an email that already has an account cannot be claimed by a guest');
+    assert.equal((await post('/api/service-orders', order())).status, 400, 'visitors must give a name and password');
+    assert.equal((await post('/api/service-orders', { ...order(), ...newClient, password: 'short' })).status, 400);
+    const taken = await post('/api/service-orders', { ...order(), ...newClient });
+    assert.equal(taken.status, 409, 'an email that already has an account must sign in');
     assert.match((await taken.json()).error, /Sign in/);
-    assert.equal((await portal(guestCookie)).customer.guest, true);
-    assert.equal(db.prepare('SELECT COUNT(*) AS n FROM orders WHERE customer_id=?').get(guestCustomer.id).n, 0);
-    const guestBody = { ...order(), ...newClient, email: 'New.Client@Example.com' };
-    const guestOrder = await post('/api/service-orders', guestBody, guestCookie);
-    assert.equal(guestOrder.status, 201);
-    const guestResult = await guestOrder.json();
-    const guestOrderId = guestResult.order.id;
-    assert.deepEqual(guestResult.account, { email: 'new.client@example.com', name: 'New Client', company: 'Client Co' });
-    assert.equal((await post('/api/service-orders', guestBody, guestCookie)).status, 200, 'retrying after the account exists stays idempotent');
-    const upgraded = await portal(guestCookie);
-    assert.equal(upgraded.customer.guest, false);
-    assert.equal(upgraded.customer.email, 'new.client@example.com');
-    assert.deepEqual(upgraded.orders.map(o => o.id), [guestOrderId]);
+    assert.equal(taken.headers.get('set-cookie'), null);
+    const visitorBody = { ...order(), ...newClient, email: 'New.Client@Example.com' };
+    const visitorOrder = await post('/api/service-orders', visitorBody);
+    assert.equal(visitorOrder.status, 201);
+    const guestCookie = visitorOrder.headers.get('set-cookie').split(';')[0];
+    const visitorResult = await visitorOrder.json();
+    const guestOrderId = visitorResult.order.id;
+    assert.deepEqual(visitorResult.account, { email: 'new.client@example.com', name: 'New Client', company: 'Client Co' });
+    assert.equal((await post('/api/service-orders', visitorBody, guestCookie)).status, 200, 'a retry from the new session stays idempotent');
+    const signedUp = await portal(guestCookie);
+    assert.equal(signedUp.customer.email, 'new.client@example.com');
+    assert.equal(signedUp.customer.guest, undefined);
+    assert.deepEqual(signedUp.orders.map(o => o.id), [guestOrderId]);
     const clientCookie = await signIn('new.client@example.com', 'client-password-123');
     assert.deepEqual((await portal(clientCookie)).orders.map(o => o.id), [guestOrderId]);
     assert.ok(!(await portal(cookie)).orders.some(o => o.id === guestOrderId));
+    const guestCustomer = { id: signedUp.customer.id };
 
     const adminGet = (resource, auth) => fetch(base + '/api/admin/' + resource, { headers: auth ? { Cookie: auth } : {} });
     for (const resource of ['customers', 'orders']) {
