@@ -81,13 +81,15 @@ export function guessService(text: string): string {
           <textarea name="details" rows="3" maxlength="1000" [ngModel]="details()" (ngModelChange)="details.set($event)" [disabled]="busy()" placeholder="What you need to find out, deadline, sample size…"></textarea>
         </label>
         @if (newVisitor()) {
-          <label class="check"><input type="checkbox" name="createAccount" [ngModel]="createAccount()" (ngModelChange)="createAccount.set($event)" [disabled]="busy()"><span>Create a Client Portal account to follow this request, order the service once it's quoted, and download reports</span></label>
-          @if (createAccount()) {
+          @if (!requireAccount()) {
+            <label class="check"><input type="checkbox" name="createAccount" [ngModel]="createAccount()" (ngModelChange)="createAccount.set($event)" [disabled]="busy()"><span>Create a Client Portal account to follow this request, order the service once it's quoted, and download reports</span></label>
+          }
+          @if (wantsAccount()) {
             <label>Create a password<input type="password" name="password" autocomplete="new-password" minlength="8" maxlength="256" required [(ngModel)]="password" [disabled]="busy()"></label>
           }
-          <p class="note">Already a client? <a routerLink="/portal" (click)="done.emit()">Sign in first</a>.</p>
+          @if (!requireAccount()) { <p class="note">Already a client? <a routerLink="/portal" (click)="done.emit()">Sign in first</a>.</p> }
         }
-        <button class="btn btn-primary" type="submit" [disabled]="busy() || quoteForm.invalid">{{ busy() ? 'Sending…' : 'Get a quote' }} ↗</button>
+        <button class="btn btn-primary" type="submit" [disabled]="busy() || quoteForm.invalid">{{ busy() ? 'Sending…' : requireAccount() ? 'Register and get a quote' : 'Get a quote' }} ↗</button>
       </form>
     }
   `,
@@ -114,6 +116,13 @@ export function guessService(text: string): string {
 })
 export class QuoteForm {
   readonly titleId = input('quote-title');
+  /** Registration mode (Client Portal sign-up): the account is always created, no checkbox. */
+  readonly requireAccount = input(false);
+  /** Service and sample count to start with, e.g. when arriving from a service page. */
+  readonly presetService = input<string | undefined>(undefined);
+  readonly presetSamples = input<number | undefined>(undefined);
+  /** Emitted after the request created the visitor's account and signed them in. */
+  readonly accountCreated = output();
   /** Emitted when the visitor follows a link out of the form (the dialog closes on it). */
   readonly done = output();
   protected readonly services = QUOTABLE;
@@ -140,6 +149,13 @@ export class QuoteForm {
   private request: { signature: string; id: string } | undefined;
 
   constructor() { void this.refreshSession(); }
+
+  ngOnInit() {
+    const service = this.presetService();
+    if (service) this.prefill({ service, samples: this.presetSamples() });
+  }
+
+  protected wantsAccount() { return this.requireAccount() || this.createAccount(); }
 
   protected unit() { return SERVICE_PRICING[this.service()]?.unit; }
 
@@ -185,7 +201,7 @@ export class QuoteForm {
       this.details().trim(),
     ].filter(Boolean).join('\n');
     const details = { service: this.service(), quantity, email: this.email().trim(), notes };
-    const account = this.newVisitor() ? { name: this.name.trim(), company: this.company.trim(), createAccount: this.createAccount(), ...(this.createAccount() ? { password: this.password } : {}) } : {};
+    const account = this.newVisitor() ? { name: this.name.trim(), company: this.company.trim(), createAccount: this.wantsAccount(), ...(this.wantsAccount() ? { password: this.password } : {}) } : {};
     const signature = JSON.stringify(details);
     if (this.request?.signature !== signature) this.request = { signature, id: crypto.randomUUID() };
     this.busy.set(true);
@@ -196,7 +212,7 @@ export class QuoteForm {
       if (!response.ok) throw new Error(result.error || 'Unable to send your request.');
       this.receipt.set(result.order);
       this.account.set(result.account ?? null);
-      if (result.account) { this.newVisitor.set(false); this.signedIn.set(true); }
+      if (result.account) { this.newVisitor.set(false); this.signedIn.set(true); this.accountCreated.emit(); }
       this.password = '';
     } catch (error) { this.error.set(error instanceof Error ? error.message : 'Unable to send your request.'); }
     finally { this.busy.set(false); }

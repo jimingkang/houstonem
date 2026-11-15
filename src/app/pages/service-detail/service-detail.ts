@@ -59,12 +59,15 @@ import { NotFoundPage } from '../not-found/not-found';
                 <p class="quote-price">Included if needed</p>
                 <p class="muted">Optional preparation for eligible SEM work. The laboratory confirms suitability.</p>
               }
-              @if (price.unit === 'project' || price.startingUsd === null || validSamples()) {
-                <a [href]="quoteMailto(s.title)" class="btn btn-primary">Email us for a quote ↗</a>
+              @if (price.startingUsd !== null && signedIn() === false) {
+                <p class="muted signin-note">Sign in to your Client Portal to request this service. New to Houston EM? Register with your first quote request.</p>
+                <a routerLink="/portal" [queryParams]="{ orderService: s.slug, samples: quantity() }" class="btn btn-primary">Sign in to request ↗</a>
+                <a routerLink="/portal" [queryParams]="{ orderService: s.slug, samples: quantity(), register: 1 }" class="text-link">New client? Register ↗</a>
+              } @else if (price.unit === 'project' || price.startingUsd === null || validSamples()) {
                 @if (price.startingUsd !== null) {
-                  <a [routerLink]="['/services', s.slug, 'order']" [queryParams]="{ samples: quantity() }" class="text-link">Send a quote request online ↗</a>
+                  <a [routerLink]="['/services', s.slug, 'order']" [queryParams]="{ samples: quantity() }" class="btn btn-primary">Send a quote request ↗</a>
                 }
-                <a routerLink="/contact" [queryParams]="{ service: s.slug, samples: quantity() }" class="text-link">Use the contact form ↗</a>
+                <a [href]="quoteMailto(s.title)" class="text-link">Email us instead ↗</a>
               }
             </aside>
           }
@@ -155,6 +158,9 @@ import { NotFoundPage } from '../not-found/not-found';
   `,
 })
 export class ServiceDetailPage {
+  /** null while checking; requesting a quotable service needs a signed-in Client Portal account. */
+  protected readonly signedIn = signal<boolean | null>(null);
+
   readonly slug = input.required<string>();
 
   protected readonly service = computed(() => SERVICES.find((s) => s.slug === this.slug()));
@@ -174,6 +180,7 @@ export class ServiceDetailPage {
   });
 
   constructor() {
+    fetch('/api/portal').then(response => this.signedIn.set(response.ok)).catch(() => this.signedIn.set(false));
     const title = inject(Title);
     effect(() => {
       this.slug();

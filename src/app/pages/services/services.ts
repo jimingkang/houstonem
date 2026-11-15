@@ -1,12 +1,15 @@
 import { Component, computed, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { QuoteDialog } from '../../shared/quote-dialog';
 import { SERVICES } from '../../data/site.data';
 import { SERVICE_CATEGORIES, SERVICE_PRICING } from '../../data/service-pricing';
 
 @Component({
   selector: 'app-services-page',
-  imports: [RouterLink],
+  imports: [RouterLink, QuoteDialog],
   template: `
+    <button type="button" class="btn btn-primary get-started" (click)="quote.open()">Get started <span aria-hidden="true">↗</span></button>
+    <app-quote-dialog #quote />
     <section class="catalog-hero">
       <div class="container hero-layout">
         <div>
@@ -14,7 +17,6 @@ import { SERVICE_CATEGORIES, SERVICE_PRICING } from '../../data/service-pricing'
           <h1>Find the right analysis for your sample.</h1>
           <p>Browse testing by technique or material question. Compare what each service delivers, then email the lab for a quote tailored to your samples.</p>
         </div>
-        <a routerLink="/contact" class="btn btn-outline">Ask the lab for help <span aria-hidden="true">↗</span></a>
       </div>
     </section>
     <section class="container catalog" aria-label="Laboratory service catalog">
@@ -59,6 +61,8 @@ import { SERVICE_CATEGORIES, SERVICE_PRICING } from '../../data/service-pricing'
     </section>
   `,
   styles: `
+    .get-started{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:50;gap:14px;padding:14px 28px;border-radius:999px;box-shadow:0 12px 30px rgba(0,0,0,.22)}
+    @media(max-width:560px){.get-started{bottom:76px}}
     .catalog-hero{background:#e9f1f2;border-bottom:1px solid var(--line);padding:clamp(2.5rem,6vw,5rem) 0}
     .hero-layout{display:flex;align-items:end;justify-content:space-between;gap:2rem;flex-wrap:wrap}
     h1{font-size:clamp(2.4rem,5.7vw,4.5rem);max-width:17ch;margin:1rem 0;line-height:1.05}
