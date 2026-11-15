@@ -1,10 +1,12 @@
 :root {
-  --background: #fafbf8;
+  /* Palette drawn from the Houston e⁻m logo: black italic wordmark,
+     electric-cyan electron orbits and teal nuclei. */
+  --background: #f7fbfb;
   --surface: #ffffff;
-  --ink: #173e35;
-  --primary: #225c49;
-  --accent: #9db492;
-  --deep: #123e35;
+  --ink: #0f1d21;
+  --primary: #00787c;
+  --accent: #4fd3f7;
+  --deep: #06343a;
 
   --muted: color-mix(in srgb, var(--ink) 66%, var(--background));
   --line: color-mix(in srgb, var(--ink) 14%, transparent);
@@ -12,13 +14,16 @@
   --on-ink: var(--surface);
   --on-primary: var(--surface);
 
-  --font-sans: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-display: 'Space Grotesk', var(--font-sans);
-  --font-mono: 'DM Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  /* Aptos ships with Microsoft 365 / Windows 11 and is not licensed for web
+     embedding, so visitors without it fall back to the closest system sans. */
+  --font-sans: 'Aptos', 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --font-display: 'Aptos Display', 'Aptos', 'Segoe UI Variable Display', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'Aptos Mono', 'DM Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --font-motto: 'Aptos Serif', Georgia, 'Times New Roman', serif;
 
   --radius: 0.2rem;
   --container: 78rem;
-  --shadow: 0 18px 45px rgba(23, 35, 41, 0.09);
+  --shadow: 0 18px 45px rgba(6, 52, 58, 0.1);
 }
 
 *,
@@ -58,7 +63,7 @@ h4 {
   line-height: 1.15;
   font-family: var(--font-display);
   font-weight: 600;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.02em;
   text-wrap: balance;
 }
 
@@ -276,4 +281,12 @@ p {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+.motto {
+  font-family: var(--font-motto);
+  font-style: italic;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--primary);
 }

@@ -14,7 +14,7 @@ import { BrandMark } from '../shared/brand-mark';
             <app-brand-mark />
             <strong>{{ contact.company }}</strong>
           </div>
-          <p>{{ contact.tagline }}</p>
+          <p class="motto footer-motto">{{ contact.tagline }}</p>
           <address>
             {{ contact.address }}<br />{{ contact.city }}<br />
             <a [href]="contact.phoneHref">{{ contact.phone }}</a><br />
@@ -52,6 +52,7 @@ import { BrandMark } from '../shared/brand-mark';
     </footer>
   `,
   styles: `
+    .about .footer-motto { color: var(--accent); font-size: 1.25rem; }
     footer {
       background: var(--ink);
       color: color-mix(in srgb, var(--on-ink) 72%, var(--ink));
