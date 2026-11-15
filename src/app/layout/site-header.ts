@@ -55,7 +55,6 @@ import { BrandMark } from '../shared/brand-mark';
             }
           </ul>
           <a class="portal-link" routerLink="/portal" routerLinkActive="active">Client Portal ↗</a>
-          <a class="btn btn-primary nav-cta" [href]="contact.phoneHref">Let’s talk <span aria-hidden="true">↗</span></a>
         </nav>
       </div>
     </header>
