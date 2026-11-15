@@ -112,11 +112,14 @@ export class QuoteDialog {
 
   protected unit() { return SERVICE_PRICING[this.service()]?.unit; }
 
-  /** Opens the dialog, carrying over whatever the visitor typed on the page. */
-  async open(text = '') {
-    const typed = text.trim();
+  /** Opens the dialog, carrying over the analysis and material the visitor typed on the page. */
+  async open(analysis = '', material = '') {
+    const need = analysis.trim(), item = material.trim();
     if (this.receipt()) { this.receipt.set(null); this.notes.set(''); this.request = undefined; }
-    if (typed) { this.notes.set(typed); this.service.set(guessService(typed)); }
+    if (need || item) {
+      this.notes.set([item && `Material or product: ${item}`, need && `Analysis needed: ${need}`].filter(Boolean).join('\n') + '\n');
+      this.service.set(guessService(`${need} ${item}`));
+    }
     this.error.set('');
     this.dialog().nativeElement.showModal();
     try {
