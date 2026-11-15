@@ -1,14 +1,14 @@
-import { Component, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, inject, viewChild } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
-import { SERVICE_PRICING, quoteSampleCount } from '../../data/service-pricing';
-import { ReactiveFormsModule, NonNullableFormBuilder, Validators } from '@angular/forms';
-import { CONTACT, SERVICES } from '../../data/site.data';
+import { quoteSampleCount } from '../../data/service-pricing';
+import { CONTACT } from '../../data/site.data';
 import { PageHeader } from '../../shared/page-header';
+import { QuoteForm } from '../../shared/quote-form';
 
 @Component({
   selector: 'app-contact-page',
-  imports: [PageHeader, ReactiveFormsModule],
+  imports: [PageHeader, QuoteForm],
   template: `
     <app-page-header
       eyebrow="Contact"
@@ -19,70 +19,10 @@ import { PageHeader } from '../../shared/page-header';
 
     <section class="section">
       <div class="container split">
-        <form class="card form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-          <h2 class="h2">Request a quote</h2>
-          <p class="muted">Opens your email app with the details pre-filled, addressed to {{ contact.email }}.</p>
-
-          <div class="row">
-            <label class="field">
-              <span>Name</span>
-              <input type="text" formControlName="name" autocomplete="name" [attr.aria-invalid]="invalid('name')" />
-              @if (invalid('name')) {
-                <small class="error">Please enter your name.</small>
-              }
-            </label>
-            <label class="field">
-              <span>Company</span>
-              <input type="text" formControlName="company" autocomplete="organization" />
-            </label>
-          </div>
-
-          <div class="row">
-            <label class="field">
-              <span>Email</span>
-              <input type="email" formControlName="email" autocomplete="email" [attr.aria-invalid]="invalid('email')" />
-              @if (invalid('email')) {
-                <small class="error">Please enter a valid email address.</small>
-              }
-            </label>
-            <label class="field">
-              <span>Phone</span>
-              <input type="tel" formControlName="phone" autocomplete="tel" />
-            </label>
-          </div>
-
-          <label class="field">
-            <span>Service of interest</span>
-            <select #serviceSelect formControlName="service" (change)="selectedService.set(serviceSelect.value)">
-              <option value="">Not sure yet</option>
-              @for (s of services; track s.slug) {
-                <option [value]="s.title">{{ s.title }}</option>
-              }
-            </select>
-          </label>
-
-          @if (scopeText(); as scope) {
-            <p class="muted estimate-note" role="status">{{ scope }}. We'll reply by email with a quote.</p>
-          }
-
-          <label class="field">
-            <span>Tell us about your sample</span>
-            <textarea
-              rows="5"
-              formControlName="message"
-              [attr.aria-invalid]="invalid('message')"
-              placeholder="Material, quantity, what you need to find out, deadline…"
-            ></textarea>
-            @if (invalid('message')) {
-              <small class="error">Please describe your project (at least 10 characters).</small>
-            }
-          </label>
-
-          <button type="submit" class="btn btn-primary">Compose email</button>
-          @if (sent()) {
-            <p class="success" role="status">Your email app should now be open. You can also call {{ contact.phone }}.</p>
-          }
-        </form>
+        <div class="card form">
+          <app-quote-form #quoteForm titleId="contact-quote-title" />
+          <p class="muted alt">Prefer email? Write to <a [href]="'mailto:' + contact.email">{{ contact.email }}</a> or call {{ contact.phone }}.</p>
+        </div>
 
         <div class="stack">
           <div class="card">
@@ -127,6 +67,7 @@ import { PageHeader } from '../../shared/page-header';
     </section>
   `,
   styles: `
+    .alt { margin-top: 18px; font-size: 13px; }
     .form {
       gap: 1.25rem;
     }
@@ -234,60 +175,18 @@ import { PageHeader } from '../../shared/page-header';
     }
   `,
 })
-export class ContactPage {
+export class ContactPage implements AfterViewInit {
   protected readonly contact = CONTACT;
-  protected readonly services = SERVICES;
-  protected readonly sent = signal(false);
   private readonly route = inject(ActivatedRoute);
-  private readonly quotedService = SERVICES.find(service => service.slug === this.route.snapshot.queryParamMap.get('service'));
-  private readonly requestedSamples = quoteSampleCount(this.route.snapshot.queryParamMap.get('samples'));
-  protected readonly selectedService = signal(this.quotedService?.title ?? '');
+  private readonly quoteForm = viewChild.required(QuoteForm);
   protected readonly mapUrl = inject(DomSanitizer).bypassSecurityTrustResourceUrl(
     `https://maps.google.com/maps?q=${encodeURIComponent(CONTACT.mapQuery)}&z=15&output=embed`,
   );
 
-  protected readonly form = inject(NonNullableFormBuilder).group({
-    name: ['', Validators.required],
-    company: [''],
-    email: ['', [Validators.required, Validators.email]],
-    phone: [''],
-    service: [this.selectedService()],
-    message: ['', [Validators.required, Validators.minLength(10)]],
-  });
-
-  protected scopeText(): string | null {
-    if (!this.quotedService || this.quotedService.title !== this.selectedService()) return null;
-    const price = SERVICE_PRICING[this.quotedService.slug];
-    if (price.startingUsd === null) return null;
-    const quantity = price.unit === 'sample' ? this.requestedSamples : 1;
-    return `Quantity: ${price.unit === 'sample' ? `${quantity} ${quantity === 1 ? 'sample' : 'samples'}` : '1 project'}`;
-  }
-
-  protected invalid(name: 'name' | 'email' | 'message'): boolean {
-    const control = this.form.controls[name];
-    return control.invalid && (control.touched || control.dirty);
-  }
-
-  protected submit(): void {
-    if (this.form.invalid) {
-      this.form.markAllAsTouched();
-      return;
-    }
-    const v = this.form.getRawValue();
-    const subject = `Quote request${v.service ? ` — ${v.service}` : ''}`;
-    const body = [
-      `Name: ${v.name}`,
-      v.company ? `Company: ${v.company}` : null,
-      `Email: ${v.email}`,
-      v.phone ? `Phone: ${v.phone}` : null,
-      v.service ? `Service: ${v.service}` : null,
-      this.scopeText(),
-      '',
-      v.message,
-    ]
-      .filter((line) => line !== null)
-      .join('\n');
-    window.location.href = `mailto:${CONTACT.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    this.sent.set(true);
+  /** Service pages link here with ?service=<slug>&samples=<n>; carry those into the form. */
+  ngAfterViewInit() {
+    const params = this.route.snapshot.queryParamMap;
+    const service = params.get('service') ?? undefined;
+    if (service) this.quoteForm().prefill({ service, samples: quoteSampleCount(params.get('samples')) });
   }
 }
