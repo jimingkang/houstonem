@@ -2,7 +2,7 @@ import { Component, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { SERVICES } from '../../data/site.data';
-import { SERVICE_PRICING, MAX_QUOTE_SAMPLES, formatUsd, quoteSampleCount } from '../../data/service-pricing';
+import { SERVICE_PRICING, MAX_QUOTE_SAMPLES, quoteSampleCount } from '../../data/service-pricing';
 
 @Component({
   selector: 'app-service-order',
@@ -11,7 +11,7 @@ import { SERVICE_PRICING, MAX_QUOTE_SAMPLES, formatUsd, quoteSampleCount } from 
     <section class="container order-page">
       <a class="text-link" routerLink="/services">← All services</a>
       @if (service(); as entry) {
-        <span class="eyebrow">Laboratory service order</span>
+        <span class="eyebrow">Quote request</span>
         <h1>{{ entry.title }}</h1>
         @if (price(); as rate) {
           @if (rate.startingUsd === null) {
@@ -19,36 +19,35 @@ import { SERVICE_PRICING, MAX_QUOTE_SAMPLES, formatUsd, quoteSampleCount } from 
             <a class="btn btn-primary" routerLink="/services/sem">View SEM services ↗</a>
           } @else if (receipt(); as order) {
             <div class="card receipt" role="status">
-              <h2>Order request received</h2><p>{{ order.status }} · {{ money(order.subtotal_cents / 100) }} USD estimated</p>
+              <h2>Quote request received</h2><p>{{ order.status }}</p>
               <p class="mono">{{ order.id }}</p>
-              @if (guest()) { <p>Guest name: <strong>{{ guest() }}</strong></p> }<p>The lab will review your samples, confirm pricing and arrange payment. No payment was collected.</p>
-              <a class="btn btn-primary" routerLink="/portal">View my orders ↗</a>
+              @if (guest()) { <p>Guest name: <strong>{{ guest() }}</strong></p> }<p>The lab will review your samples and email you a quote. Nothing is charged until you agree to the quote.</p>
+              <a class="btn btn-primary" routerLink="/portal">View my requests ↗</a>
             </div>
           } @else {
             <div class="layout">
               <div class="card summary">
-                <h2>Order summary</h2>
+                <h2>Request summary</h2>
                 <p>{{ entry.summary }}</p>
-                <dl><div><dt>Reference rate</dt><dd>{{ money(rate.startingUsd) }} USD / {{ rate.unit }}</dd></div>
-                <div><dt>Quantity</dt><dd>{{ quantity() }} {{ rate.unit }}{{ quantity() === 1 ? '' : 's' }}</dd></div>
-                <div class="total"><dt>Estimated starting total</dt><dd>{{ money(rate.startingUsd * quantity()) }} USD</dd></div></dl>
-                <p class="note">The lab confirms scope, sample preparation, shipping and final pricing before work begins. No online payment is collected.</p>
+                <dl><div><dt>Quantity</dt><dd>{{ quantity() }} {{ rate.unit }}{{ quantity() === 1 ? '' : 's' }}</dd></div>
+                <div class="total"><dt>Price</dt><dd>Quoted by email</dd></div></dl>
+                <p class="note">We negotiate pricing by email. The lab reviews your samples and replies with scope, turnaround and a quote. No online payment is collected.</p>
                 <a class="text-link" [routerLink]="['/services', entry.slug]">Review service details ↗</a>
               </div>
               <div class="card">
                 @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
-                @if (loading()) { <p role="status">Preparing your checkout…</p> }
+                @if (loading()) { <p role="status">Preparing your request…</p> }
                 @else if (!signedIn()) {
-                  <h2>Continue to checkout</h2><p>Try again as a guest or sign in with an existing account.</p>
+                  <h2>Continue your request</h2><p>Try again as a guest or sign in with an existing account.</p>
                   <button type="button" class="btn btn-outline" (click)="prepareCheckout()">Continue as guest</button>
                   <a routerLink="/portal" [queryParams]="{ orderService: entry.slug, samples: quantity() }" class="btn btn-primary">Sign in to Client Portal ↗</a>
                 } @else {
                   <form #orderForm="ngForm" (ngSubmit)="submit()">
                     <h2>Tell us about your samples</h2>
-                    @if (guest()) { <p class="note">Checking out as <strong>{{ guest() }}</strong>. Use this browser to view your order in the Client Portal.</p> }
+                    @if (guest()) { <p class="note">Sending as guest <strong>{{ guest() }}</strong>. Use this browser to view your request in the Client Portal.</p> }
                     <label>Contact email<input type="email" email name="email" autocomplete="email" maxlength="254" required [(ngModel)]="email" [disabled]="busy()"></label>
                     <label>Sample and testing details<textarea name="notes" rows="5" minlength="10" maxlength="1500" required [(ngModel)]="notes" [disabled]="busy()" placeholder="Material, areas of interest, testing goals, and deadline"></textarea></label>
-                    <button class="btn btn-primary" type="submit" [disabled]="busy() || orderForm.invalid || notes.trim().length < 10">{{ busy() ? 'Submitting…' : 'Submit service order' }} ↗</button>
+                    <button class="btn btn-primary" type="submit" [disabled]="busy() || orderForm.invalid || notes.trim().length < 10">{{ busy() ? 'Submitting…' : 'Request a quote' }} ↗</button>
                   </form>
                 }
               </div>
@@ -59,7 +58,7 @@ import { SERVICE_PRICING, MAX_QUOTE_SAMPLES, formatUsd, quoteSampleCount } from 
     </section>
   `,
   styles: `
-    .order-page{padding-block:3rem 6rem;display:grid;gap:1.1rem}.order-page>.text-link{width:fit-content}.order-page h1{font-size:clamp(2rem,5vw,3.5rem)}.layout{display:grid;gap:1rem;align-items:start;margin-top:.75rem}.summary,.receipt{background:#edf3ef}.card h2{font-size:1.35rem}.card p{font-size:.9rem}.receipt .mono{overflow-wrap:anywhere}.card .btn{width:fit-content}.summary dl{margin:0}.summary dl>div{display:flex;justify-content:space-between;gap:.75rem;padding:.65rem 0;border-top:1px solid var(--line);font-size:.87rem}.summary dd{margin:0;text-align:right}.total{font-weight:650}.note{color:var(--muted)}form{display:grid;gap:1rem}label{display:grid;gap:.3rem;font-size:.85rem;font-weight:550}input,textarea{width:100%;border:1px solid var(--line);border-radius:var(--radius);padding:.65rem;background:white;color:var(--ink);font:inherit}textarea{resize:vertical}.error{color:#8a3326}button:disabled{opacity:.55;cursor:default}@media(min-width:800px){.layout{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr)}}
+    .order-page{padding-block:3rem 6rem;display:grid;gap:1.1rem}.order-page>.text-link{width:fit-content}.order-page h1{font-size:clamp(2rem,5vw,3.5rem)}.layout{display:grid;gap:1rem;align-items:start;margin-top:.75rem}.summary,.receipt{background:#edf3f3}.card h2{font-size:1.35rem}.card p{font-size:.9rem}.receipt .mono{overflow-wrap:anywhere}.card .btn{width:fit-content}.summary dl{margin:0}.summary dl>div{display:flex;justify-content:space-between;gap:.75rem;padding:.65rem 0;border-top:1px solid var(--line);font-size:.87rem}.summary dd{margin:0;text-align:right}.total{font-weight:650}.note{color:var(--muted)}form{display:grid;gap:1rem}label{display:grid;gap:.3rem;font-size:.85rem;font-weight:550}input,textarea{width:100%;border:1px solid var(--line);border-radius:var(--radius);padding:.65rem;background:white;color:var(--ink);font:inherit}textarea{resize:vertical}.error{color:#8a3326}button:disabled{opacity:.55;cursor:default}@media(min-width:800px){.layout{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr)}}
   `,
 })
 export class ServiceOrderPage {
@@ -73,8 +72,7 @@ export class ServiceOrderPage {
   protected readonly guest = signal('');
   protected readonly busy = signal(false);
   protected readonly error = signal('');
-  protected readonly receipt = signal<{id:string;status:string;subtotal_cents:number} | null>(null);
-  protected readonly money = formatUsd;
+  protected readonly receipt = signal<{id:string;status:string} | null>(null);
   protected email = '';
   protected notes = '';
   private request: { signature: string; id: string } | undefined;

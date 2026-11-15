@@ -1,7 +1,7 @@
 export interface Micrograph {
   src: string;
   alt: string;
-  mag: string;
+  mag?: string;
   hv?: string;
   det?: string;
   wd?: string;
@@ -37,7 +37,7 @@ export const CONTACT = {
   email: 'LAB@houstonem.com',
   address: '12919 Southwest Fwy, Suite 140',
   city: 'Houston, TX 77477',
-  tagline: 'Focus to Know and Empower!',
+  tagline: 'Focus. See. Solve.',
   mapQuery: '12919 Southwest Fwy Suite 140, Stafford, TX 77477',
   social: [
     { label: 'LinkedIn', href: 'https://www.linkedin.com/company/2672423' },
@@ -62,32 +62,48 @@ export const CONTACT = {
   ],
 } as const;
 
-const img = (src: string, alt: string, mag: string, extra: Partial<Micrograph> = {}): Micrograph => ({
-  src: `/images/${src}.png`,
+/**
+ * Every image here is Houston Electron Microscopy's own work: from the HEM Marketing
+ * "Website" folder on SharePoint/OneDrive, or from houstonem.com (source noted beside
+ * each entry). Instrument data is only filled in where the source states it.
+ */
+const img = (src: string, alt: string, extra: Partial<Micrograph> = {}): Micrograph => ({
+  src: `/images/${src}.jpg`,
   alt,
-  mag,
-  hv: '20.00 kV',
-  det: 'CBS',
-  wd: '10.1 mm',
   ...extra,
 });
 
 export const IMAGES = {
-  hero: img('hero-colorsem', 'ColorSEM backscatter image with real-time EDS element map of a corroded steel cross-section', '1 000 x'),
-  metals: img('metals', 'SEM image of a ductile metal fracture surface with microvoid dimples', '25 000 x', { det: 'ETD' }),
-  polymers: img('polymers', 'SEM image of crossing polymer fibers', '800 x', { det: 'ETD', hv: '5.00 kV' }),
-  liquids: img('liquids-oils', 'SEM image of contaminant particles filtered from an oil sample', '1 500 x'),
-  powders: img('powders', 'SEM image of fine crystalline powder particles', '3 000 x', { det: 'ETD' }),
-  coatings: img('coatings', 'Cross-section of a coating on a metal substrate with oxides at the interface', '650 x', { det: 'ETD', wd: '11.5 mm' }),
-  core: img('core-samples', 'SEM image of shale core sample showing clay platelets and microporosity', '5 000 x', { det: 'LVD' }),
-  failure: img('failure', 'SEM image of a fatigue crack propagating along a metal component', '200 x', { det: 'ETD' }),
-  corrosion: img('corrosion', 'SEM image of a corrosion pit with iron oxide corrosion products', '500 x'),
-  particle: img('particle', 'EDS map of an inclusion particle in a polished metal matrix', '2 500 x'),
-  ftir: img('ftir', 'Micro FT-IR microscope stage with a polymer sample under the objective', '—', { hv: '—', det: 'FT-IR', wd: '—' }),
-  insect: img('insect', 'SEM image of an insect compound eye with hexagonal ommatidia', '350 x', { det: 'ETD', hv: '10.00 kV' }),
-  seawater: img('seawater', 'SEM image of diatoms and salt crystals from dried Galveston sea water', '1 200 x', { det: 'ETD' }),
-  eggshell: img('eggshell', 'SEM image of a fractured egg shell showing columnar calcite crystals', '600 x', { det: 'ETD' }),
-  lab: img('lab', 'Scanning electron microscope workstation in the Houston Electron Microscopy laboratory', '—', { hv: '—', det: '—', wd: '—' }),
+  // OneDrive: 00 Pictures/COLOR SEM-EDS at Houston EM.jpg
+  hero: img('hero-colorsem', 'ColorSEM image with a real-time EDS element map, taken at Houston Electron Microscopy'),
+  // OneDrive: Exotic Materials/938205-C Leading Edge 711-microns 20kX.jpg
+  metals: img('metals', 'SEM image of an exotic alloy microstructure at 20 000 x', { mag: '20 000 x' }),
+  // OneDrive: 00 Pictures/EXAMPLE PTFE Side 20kX - Copy.jpg
+  polymers: img('polymers', 'SEM image of a PTFE surface at 20 000 x', { mag: '20 000 x' }),
+  // OneDrive: Liquid & Oils/22-589 Liquid Residue 2000X-1.tif
+  liquids: img('liquids-oils', 'ColorSEM image of residue filtered from a liquid sample at 2 000 x', { mag: '2 000 x' }),
+  // OneDrive: 00 Pictures/24-331 Ni-Zr Powder-2 650X Zr-Co.tif
+  powders: img('powders', 'ColorSEM element map of a nickel-zirconium powder at 650 x', { mag: '650 x' }),
+  // houstonem.com/images/coatings/coating-layers.jpg
+  coatings: img('coatings', 'SEM cross-section of coating layers with thickness measurements'),
+  // OneDrive: 00 Pictures/Sample of clay-like material ... 2000x a.tif
+  core: img('core-samples', 'ColorSEM element map of a clay-like mineral sample at 2 000 x', { mag: '2 000 x' }),
+  // OneDrive: 00 Pictures/NEW CUT C-5, Origin C-5 -IG-500X.jpg
+  failure: img('failure', 'SEM image of an intergranular fracture surface at 500 x', { mag: '500 x' }),
+  // houstonem.com/images/gallery2/1.jpg
+  corrosion: img('corrosion', 'SEM image of a corroded metal surface'),
+  // OneDrive: 00 Pictures/165-23-00125-009 100X (23-367).jpg
+  particle: img('particle', 'Particle analysis image with particles color-coded by composition at 100 x', { mag: '100 x' }),
+  // OneDrive: 00 Pictures/FTIR photo for google business.jpg
+  ftir: img('ftir', 'Micro FT-IR chemical map, sample image and spectrum', { det: 'FT-IR' }),
+  // houstonem.com/images/gallery6/4.jpg
+  insect: img('insect', "SEM image of a mosquito's compound eyes"),
+  // houstonem.com/images/gallery7/4.jpg
+  seawater: img('seawater', 'SEM image of Skeletonema costatum diatoms from Galveston sea water'),
+  // houstonem.com/images/eggShell/Egg-1000XW.jpg
+  eggshell: img('eggshell', 'SEM image of a fractured chicken egg shell', { mag: '1 000 x' }),
+  // houstonem.com/images/banner/ColorSEM-Remote-2.jpg (cropped)
+  lab: img('lab', 'Thermo Scientific SEM workstation in the Houston Electron Microscopy laboratory'),
 };
 
 export const SERVICES: Service[] = [
@@ -323,56 +339,56 @@ export const GALLERY_CATEGORIES = [
 export const GALLERY: GalleryItem[] = [
   {
     category: 'Fracture Surfaces',
-    title: 'Fatigue crack initiation',
-    description: 'Crack propagating from a stress concentration along a machined edge.',
+    title: 'Intergranular fracture',
+    description: 'Grain facets exposed along the fracture origin, imaged at 500 x.',
     image: IMAGES.failure,
   },
   {
-    category: 'Fracture Surfaces',
-    title: 'Ductile overload',
-    description: 'Microvoid coalescence dimples typical of ductile overload fracture.',
+    category: 'Phase Analysis',
+    title: 'Exotic alloy microstructure',
+    description: 'Fine cuboidal structure at the leading edge of an exotic alloy part, at 20 000 x.',
     image: IMAGES.metals,
   },
   {
     category: 'Non-Metallics',
-    title: 'Polymer fibers',
-    description: 'Synthetic fibers imaged in low vacuum without conductive coating.',
+    title: 'PTFE surface',
+    description: 'Surface texture of PTFE at 20 000 x.',
     image: IMAGES.polymers,
   },
   {
-    category: 'Non-Metallics',
-    title: 'Crystalline powder',
-    description: 'Powder morphology and particle size distribution.',
+    category: 'Phase Analysis',
+    title: 'Nickel-zirconium powder',
+    description: 'ColorSEM element map separating the phases in a Ni-Zr powder, at 650 x.',
     image: IMAGES.powders,
   },
   {
     category: 'Phase Analysis',
-    title: 'Inclusion map',
-    description: 'Real-time ColorSEM element map separating aluminum and sulfur phases.',
+    title: 'Particle analysis',
+    description: 'Particles segmented and color-coded by composition, at 100 x.',
     image: IMAGES.particle,
   },
   {
     category: 'Phase Analysis',
-    title: 'Coating interface',
-    description: 'Oxides concentrated at the coating/substrate interface.',
+    title: 'Coating layers',
+    description: 'Cross-section of coating layers with thickness measurements.',
     image: IMAGES.coatings,
   },
   {
     category: 'Insects',
-    title: 'Compound eye',
-    description: 'Hexagonal ommatidia and interstitial bristles.',
+    title: 'Mosquito eyes',
+    description: "Compound eyes on a mosquito's head.",
     image: IMAGES.insect,
   },
   {
     category: 'Sea Water',
     title: 'Galveston sea water',
-    description: 'Diatoms and salt crystals left after drying a Galveston Bay sample.',
+    description: 'Skeletonema costatum diatoms linked into a chain, from Galveston sea water.',
     image: IMAGES.seawater,
   },
   {
     category: 'Egg Shell',
-    title: 'Egg shell cross-section',
-    description: 'Columnar calcite crystals and membrane fibers.',
+    title: 'Egg shell fracture',
+    description: 'Edge of a fractured chicken egg shell, magnified 1 000 times.',
     image: IMAGES.eggshell,
   },
 ];

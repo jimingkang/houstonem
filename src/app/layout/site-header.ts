@@ -11,7 +11,7 @@ import { BrandMark } from '../shared/brand-mark';
   template: `
     <div class="utility">
       <div class="container utility-inner">
-        <span class="mono">Independent expertise. Microscopic precision.</span>
+        <em class="motto utility-motto">Focus. See. Solve.</em>
         <div class="utility-links">
           <a [href]="contact.phoneHref">{{ contact.phone }}</a>
           <a [href]="'mailto:' + contact.email">{{ contact.email }}</a>
@@ -74,10 +74,10 @@ import { BrandMark } from '../shared/brand-mark';
       gap: 1rem;
       min-height: 2.25rem;
     }
-    .utility-inner > .mono {
+    .utility-inner > .utility-motto {
       display: none;
-      font-size: 0.75rem;
-      letter-spacing: 0.04em;
+      font-size: 0.875rem;
+      color: var(--accent);
     }
     .utility-links {
       display: flex;
@@ -92,7 +92,7 @@ import { BrandMark } from '../shared/brand-mark';
       text-decoration: underline;
     }
     @media (min-width: 640px) {
-      .utility-inner > .mono {
+      .utility-inner > .utility-motto {
         display: inline;
       }
       .utility-links {

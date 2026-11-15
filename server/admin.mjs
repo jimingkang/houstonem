@@ -21,7 +21,7 @@ export async function serveAdmin(req, res, json, db, user, url, asCustomer) {
       customer: asCustomer(customer),
       subscriptions: await db.prepare('SELECT id,service,plan,status,renewal_date FROM subscriptions WHERE customer_id=? ORDER BY id DESC').all(id),
       reports: await db.prepare('SELECT id,title,sample_id,analysis,status,issued_at,filename,content IS NOT NULL AS has_file FROM reports WHERE customer_id=? ORDER BY id DESC').all(id),
-      orders: await customerOrders(db, id),
+      orders: await customerOrders(db, id, null, { internal: true }),
     });
   }
   const download = /^\/api\/admin\/reports\/(\d+)\/download$/.exec(url.pathname);

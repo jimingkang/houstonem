@@ -16,10 +16,16 @@ export const ORDER_SCHEMA = `CREATE TABLE IF NOT EXISTS products(
     quantity INTEGER NOT NULL CHECK(quantity>0),unit TEXT NOT NULL CHECK(unit IN ('sample','project')),price_cents INTEGER NOT NULL CHECK(price_cents>=0));
     CREATE INDEX IF NOT EXISTS orders_customer ON orders(customer_id,created_at);`;
 export function initializeOrders(db) { db.exec(ORDER_SCHEMA); }
-export async function customerOrders(db, customerId, orderId = null) {
-  const select = 'SELECT id,status,subtotal_cents,currency,created_at FROM orders WHERE customer_id=?';
+// Customer-facing view: prices are negotiated by email, so the stored reference
+// estimates (subtotal_cents, price_cents) stay internal to the lab's admin tools,
+// which pass { internal: true }.
+export async function customerOrders(db, customerId, orderId = null, { internal = false } = {}) {
+  const select = `SELECT id,status,${internal ? 'subtotal_cents,currency,' : ''}created_at FROM orders WHERE customer_id=?`;
   const orders = orderId === null ? await db.prepare(select + ' ORDER BY created_at DESC').all(customerId) : await db.prepare(select + ' AND id=?').all(customerId, orderId);
-  return Promise.all(orders.map(async order => ({ ...order, items: await orderItems(db, order.id) })));
+  return Promise.all(orders.map(async order => {
+    const items = await orderItems(db, order.id);
+    return { ...order, items: internal ? items : items.map(({ price_cents, ...item }) => item) };
+  }));
 }
 
 export function orderItems(db, id) {

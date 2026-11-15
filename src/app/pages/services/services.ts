@@ -1,7 +1,7 @@
 import { Component, computed, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { SERVICES } from '../../data/site.data';
-import { SERVICE_CATEGORIES, SERVICE_PRICING, formatUsd } from '../../data/service-pricing';
+import { SERVICE_CATEGORIES, SERVICE_PRICING } from '../../data/service-pricing';
 
 @Component({
   selector: 'app-services-page',
@@ -12,7 +12,7 @@ import { SERVICE_CATEGORIES, SERVICE_PRICING, formatUsd } from '../../data/servi
         <div>
           <span class="eyebrow">Houston Electron Microscopy / Laboratory services</span>
           <h1>Find the right analysis for your sample.</h1>
-          <p>Browse testing by technique or material question. Compare what each service delivers and see starting estimates before requesting a quote.</p>
+          <p>Browse testing by technique or material question. Compare what each service delivers, then email the lab for a quote tailored to your samples.</p>
         </div>
         <a routerLink="/contact" class="btn btn-outline">Ask the lab for help <span aria-hidden="true">↗</span></a>
       </div>
@@ -35,7 +35,7 @@ import { SERVICE_CATEGORIES, SERVICE_PRICING, formatUsd } from '../../data/servi
         </aside>
         <div>
           <div class="results-head"><h2>{{ category() || 'All services' }}</h2><p role="status">{{ filtered().length }} {{ filtered().length === 1 ? 'service' : 'services' }}</p></div>
-          <p class="pricing-note">Illustrative starting estimates in USD. The lab confirms scope, sample preparation and final pricing before work begins.</p>
+          <p class="pricing-note">Pricing is quoted by email. Tell the lab about your samples and we will reply with scope, turnaround and a quote.</p>
           <div class="cards">
             @for (service of filtered(); track service.slug) {
               <article class="service-card">
@@ -45,8 +45,8 @@ import { SERVICE_CATEGORIES, SERVICE_PRICING, formatUsd } from '../../data/servi
                   <h3><a [routerLink]="['/services', service.slug]">{{ service.title }}</a></h3>
                   <p>{{ service.summary }}</p>
                   <div class="card-footer">
-                    <span class="price">@if (service.pricing.startingUsd !== null) { <strong>From {{ money(service.pricing.startingUsd) }}</strong><small>USD / {{ service.pricing.unit }}</small> } @else { <strong>Included if needed</strong><small>With eligible SEM analysis</small> }</span>
-                    <a [routerLink]="['/services', service.slug]" class="text-link" [attr.aria-label]="'View details and estimate for ' + service.title">View service ↗</a>
+                    <span class="price">@if (service.pricing.startingUsd !== null) { <strong>Quote by email</strong><small>Priced per project</small> } @else { <strong>Included if needed</strong><small>With eligible SEM analysis</small> }</span>
+                    <a [routerLink]="['/services', service.slug]" class="text-link" [attr.aria-label]="'View details and request a quote for ' + service.title">View service ↗</a>
                   </div>
                 </div>
               </article>
@@ -59,7 +59,7 @@ import { SERVICE_CATEGORIES, SERVICE_PRICING, formatUsd } from '../../data/servi
     </section>
   `,
   styles: `
-    .catalog-hero{background:#eaf1eb;border-bottom:1px solid var(--line);padding:clamp(2.5rem,6vw,5rem) 0}
+    .catalog-hero{background:#e9f1f2;border-bottom:1px solid var(--line);padding:clamp(2.5rem,6vw,5rem) 0}
     .hero-layout{display:flex;align-items:end;justify-content:space-between;gap:2rem;flex-wrap:wrap}
     h1{font-size:clamp(2.4rem,5.7vw,4.5rem);max-width:17ch;margin:1rem 0;line-height:1.05}
     .hero-layout p{max-width:58ch;color:var(--muted)}.hero-layout a{white-space:nowrap}
@@ -70,11 +70,11 @@ import { SERVICE_CATEGORIES, SERVICE_PRICING, formatUsd } from '../../data/servi
     .pricing-note{font-size:.85rem;color:var(--muted);margin:.6rem 0 1.25rem}
     .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,17rem),1fr));gap:1rem}
     .service-card{border:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;overflow:hidden;border-radius:var(--radius)}
-    .service-card>img{width:100%;height:8rem;object-fit:cover;background:#dae5dc}.card-content{flex:1;display:flex;flex-direction:column;padding:1rem;gap:.55rem}
+    .service-card>img{width:100%;height:8rem;object-fit:cover;background:#d9e5e6}.card-content{flex:1;display:flex;flex-direction:column;padding:1rem;gap:.55rem}
     .method{font-size:.7rem;text-transform:uppercase;color:var(--primary)}.card-content h3{font-size:1.2rem;text-wrap:initial}.card-content h3 a{text-decoration:none}.card-content h3 a:hover{text-decoration:underline}.card-content p{font-size:.85rem;color:var(--muted);margin-bottom:.6rem}
     .card-footer{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:.5rem;border-top:1px solid var(--line);padding-top:.75rem;margin-top:auto}.price small{display:block;color:var(--muted);font-size:.72rem}.card-footer a{font-size:.8rem;white-space:nowrap}
     .empty{grid-column:1/-1;padding:2rem;background:var(--surface);border:1px solid var(--line)}.empty p{margin:.6rem 0 1rem}
-    @media(min-width:900px){.catalog-layout{grid-template-columns:15rem minmax(0,1fr)}.category-select{display:none}aside{display:block;align-self:start;border:1px solid var(--line);background:var(--surface);padding:.75rem}aside p{font-size:.72rem;color:var(--muted);padding:.5rem}aside button{border:0;background:none;color:var(--ink);font:inherit;font-size:.85rem;text-align:left;padding:.65rem .5rem;width:100%;display:flex;justify-content:space-between;gap:.5rem;cursor:pointer}aside button:hover,aside button[aria-pressed=true]{background:#eaf1eb}aside button span{color:var(--muted)}}
+    @media(min-width:900px){.catalog-layout{grid-template-columns:15rem minmax(0,1fr)}.category-select{display:none}aside{display:block;align-self:start;border:1px solid var(--line);background:var(--surface);padding:.75rem}aside p{font-size:.72rem;color:var(--muted);padding:.5rem}aside button{border:0;background:none;color:var(--ink);font:inherit;font-size:.85rem;text-align:left;padding:.65rem .5rem;width:100%;display:flex;justify-content:space-between;gap:.5rem;cursor:pointer}aside button:hover,aside button[aria-pressed=true]{background:#e9f1f2}aside button span{color:var(--muted)}}
     @media(max-width:540px){.filter-bar{flex-direction:column}}
   `,
 })
@@ -84,7 +84,6 @@ export class ServicesPage {
   protected readonly counts = Object.fromEntries(SERVICE_CATEGORIES.map(category => [category, this.services.filter(service => service.pricing.category === category).length]));
   protected readonly query = signal('');
   protected readonly category = signal('');
-  protected readonly money = formatUsd;
   protected readonly filtered = computed(() => {
     const terms = this.query().toLowerCase().trim().split(/\s+/).filter(Boolean);
     return this.services.filter(service => {

@@ -8,7 +8,7 @@ import { openDatabase, addCustomer } from './db.mjs';
 import { updateOrderStatus } from './orders.mjs';
 import { createPortalServer } from './index.mjs';
 
-test('service orders use catalog pricing, preserve old orders and stay private', async () => {
+test('service quote requests keep internal estimates, hide prices, preserve old orders and stay private', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'hem-service-orders-'));
   const db = openDatabase(dir);
   const buyer = addCustomer(db, 'buyer@example.com', 'buyer-password-123', 'Buyer', 'Buyer Inc');
@@ -45,15 +45,18 @@ test('service orders use catalog pricing, preserve old orders and stay private',
     const [{ order: saved }, { order: retried }] = await Promise.all(responses.map(r => r.json()));
     assert.equal(saved.id, retried.id);
     assert.equal(saved.status, 'Awaiting lab confirmation');
-    assert.equal(saved.subtotal_cents, 75000);
+    assert.equal(saved.subtotal_cents, undefined);
     assert.equal(saved.items[0].unit, 'sample');
     assert.equal(saved.items[0].quantity, 3);
-    assert.equal(saved.items[0].price_cents, 25000);
+    assert.equal(saved.items[0].price_cents, undefined);
+    assert.equal(db.prepare('SELECT subtotal_cents FROM orders WHERE id=?').get(saved.id).subtotal_cents, 75000);
+    assert.equal(db.prepare('SELECT price_cents FROM service_order_items WHERE order_id=?').get(saved.id).price_cents, 25000);
     assert.equal((await post('/api/service-orders', {...body, quantity: 4}, cookie)).status, 409);
     const history = await portal(cookie);
     assert.equal(history.orders.length, 2);
     assert.equal(history.orders.find(o => o.id === 'legacy-order').items[0].name, 'Accessory');
     assert.equal(history.orders.find(o => o.id === saved.id).shipping_email, undefined);
+    assert.ok(!JSON.stringify(history.orders).includes('_cents'), 'portal must not expose prices');
     const other = await signIn('other@example.com', 'other-password-123');
     assert.deepEqual((await portal(other)).orders, []);
     const kept = await post('/api/guest-session', {}, cookie);
