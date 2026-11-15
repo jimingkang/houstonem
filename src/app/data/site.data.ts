@@ -37,7 +37,7 @@ export const CONTACT = {
   email: 'LAB@houstonem.com',
   address: '12919 Southwest Fwy, Suite 140',
   city: 'Houston, TX 77477',
-  tagline: 'Focus to Know and Empower!',
+  tagline: 'Focus. See. Solve.',
   mapQuery: '12919 Southwest Fwy Suite 140, Stafford, TX 77477',
   social: [
     { label: 'LinkedIn', href: 'https://www.linkedin.com/company/2672423' },
