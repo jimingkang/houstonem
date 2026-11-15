@@ -37,10 +37,11 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/service-detail/service-detail').then((m) => m.ServiceDetailPage),
   },
   {
-    path: 'galleries',
-    title: 'Galleries' + suffix,
-    loadComponent: () => import('./pages/galleries/galleries').then((m) => m.GalleriesPage),
+    path: 'industries',
+    title: 'Industries' + suffix,
+    loadComponent: () => import('./pages/industries/industries').then((m) => m.IndustriesPage),
   },
+  { path: 'galleries', redirectTo: 'industries', pathMatch: 'full' },
   {
     path: 'contact',
     title: 'Contact' + suffix,

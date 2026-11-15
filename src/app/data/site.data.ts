@@ -23,10 +23,12 @@ export interface Tile {
   link: string;
 }
 
-export interface GalleryItem {
-  category: string;
-  title: string;
-  description: string;
+export interface Industry {
+  slug: string;
+  name: string;
+  summary: string;
+  applications: string[];
+  services: string[];
   image: Micrograph;
 }
 
@@ -327,69 +329,110 @@ export const ANALYSES: Tile[] = [
   { label: 'Micro FT-IR', image: IMAGES.ftir, link: '/micro-ftir' },
 ];
 
-export const GALLERY_CATEGORIES = [
-  'Fracture Surfaces',
-  'Non-Metallics',
-  'Phase Analysis',
-  'Insects',
-  'Sea Water',
-  'Egg Shell',
-] as const;
-
-export const GALLERY: GalleryItem[] = [
+export const INDUSTRIES: Industry[] = [
   {
-    category: 'Fracture Surfaces',
-    title: 'Intergranular fracture',
-    description: 'Grain facets exposed along the fracture origin, imaged at 500 x.',
-    image: IMAGES.failure,
+    slug: 'oil-gas',
+    name: 'Oil, Gas & Energy',
+    summary: 'Drilling tools, downhole parts and reservoir rock see heat, pressure and abrasive fluids. We show what wore, cracked or corroded, and what the formation is made of.',
+    applications: [
+      'PDC cutter wear, leaching depth and diamond table quality',
+      'Pipeline, valve and tubing corrosion and scale deposits',
+      'Core and cuttings mineralogy, porosity and clay content',
+      'Failure analysis of downhole tools and fasteners',
+    ],
+    services: ['pdc-analysis', 'core-samples', 'corrosion', 'failure-analysis'],
+    image: IMAGES.core,
   },
   {
-    category: 'Phase Analysis',
-    title: 'Exotic alloy microstructure',
-    description: 'Fine cuboidal structure at the leading edge of an exotic alloy part, at 20 000 x.',
+    slug: 'aerospace',
+    name: 'Aerospace & Defense',
+    summary: 'Exotic alloys and coated parts must meet tight specifications. We check microstructure, coatings and fracture surfaces against what the part should be.',
+    applications: [
+      'Fracture origin and mode: fatigue, overload, intergranular',
+      'Coating thickness and thermal barrier coating integrity',
+      'Alloy composition and phase verification',
+      'Grain size and microhardness after heat treatment',
+    ],
+    services: ['failure-analysis', 'coatings', 'metallography', 'microhardness'],
     image: IMAGES.metals,
   },
   {
-    category: 'Non-Metallics',
-    title: 'PTFE surface',
-    description: 'Surface texture of PTFE at 20 000 x.',
+    slug: 'medical-devices',
+    name: 'Medical Devices',
+    summary: 'Implants, instruments and packaging need clean, defect-free surfaces. We find and identify particles, residues and surface defects.',
+    applications: [
+      'Particulate contamination on implants and components',
+      'Residue and foreign material identification',
+      'Surface finish and coating inspection',
+      'Polymer identification for device parts',
+    ],
+    services: ['contamination', 'particle-analysis', 'micro-ftir', 'sem'],
     image: IMAGES.polymers,
   },
   {
-    category: 'Phase Analysis',
-    title: 'Nickel-zirconium powder',
-    description: 'ColorSEM element map separating the phases in a Ni-Zr powder, at 650 x.',
+    slug: 'manufacturing',
+    name: 'Manufacturing & Metals',
+    summary: 'When a part cracks or a batch goes wrong, we look at the material itself to find the root cause and help stop it happening again.',
+    applications: [
+      'Root cause analysis of broken or cracked parts',
+      'Weld, braze and heat treatment evaluation',
+      'Inclusions and impurities in metals',
+      'Corrosion and wear on production parts',
+    ],
+    services: ['failure-analysis', 'microstructural-analysis', 'metallography', 'eds'],
+    image: IMAGES.failure,
+  },
+  {
+    slug: 'chemicals-plastics',
+    name: 'Chemicals, Plastics & Polymers',
+    summary: 'Unknown films, fibres and inclusions in plastics often need both chemistry and imaging. We combine Micro FT-IR with SEM/EDS to identify them.',
+    applications: [
+      'Identification of unknown polymers, fibres and films',
+      'Contaminants and gels in plastic parts',
+      'Filler and additive distribution',
+      'Comparison of good and failed material',
+    ],
+    services: ['micro-ftir', 'contamination', 'combined-characterization', 'eds'],
+    image: IMAGES.ftir,
+  },
+  {
+    slug: 'powders',
+    name: 'Powders & Additive Manufacturing',
+    summary: 'Particle size, shape and chemistry decide how a powder flows, sinters and performs. We measure all three.',
+    applications: [
+      'Particle size and shape distribution',
+      'Composition and phase mapping of powders',
+      'Contaminant and oversize particle detection',
+      'Crystalline phase identification',
+    ],
+    services: ['particle-analysis', 'elemental-mapping', 'xrd', 'sem'],
     image: IMAGES.powders,
   },
   {
-    category: 'Phase Analysis',
-    title: 'Particle analysis',
-    description: 'Particles segmented and color-coded by composition, at 100 x.',
-    image: IMAGES.particle,
+    slug: 'lubricants-fluids',
+    name: 'Lubricants, Oils & Fluids',
+    summary: 'Debris and residue in a fluid tell the story of the machine it came from. We filter, image and analyze what is in it.',
+    applications: [
+      'Wear debris in lubricating oils',
+      'Filter and strainer deposits',
+      'Residue left by fluids and cleaning processes',
+      'Source tracing of particles by composition',
+    ],
+    services: ['particle-analysis', 'contamination', 'eds'],
+    image: IMAGES.liquids,
   },
   {
-    category: 'Phase Analysis',
-    title: 'Coating layers',
-    description: 'Cross-section of coating layers with thickness measurements.',
-    image: IMAGES.coatings,
-  },
-  {
-    category: 'Insects',
-    title: 'Mosquito eyes',
-    description: "Compound eyes on a mosquito's head.",
-    image: IMAGES.insect,
-  },
-  {
-    category: 'Sea Water',
-    title: 'Galveston sea water',
-    description: 'Skeletonema costatum diatoms linked into a chain, from Galveston sea water.',
+    slug: 'research-environmental',
+    name: 'Research & Environmental',
+    summary: 'Universities, labs and environmental teams use our instruments for imaging and composition of natural and engineered samples.',
+    applications: [
+      'Imaging of biological and natural samples',
+      'Water, sediment and mineral samples',
+      'Material characterization for research projects',
+      'Sample preparation with gold sputter coating',
+    ],
+    services: ['sem', 'eds', 'xrd', 'gold-sputtering'],
     image: IMAGES.seawater,
-  },
-  {
-    category: 'Egg Shell',
-    title: 'Egg shell fracture',
-    description: 'Edge of a fractured chicken egg shell, magnified 1 000 times.',
-    image: IMAGES.eggshell,
   },
 ];
 
@@ -399,6 +442,6 @@ export const NAV = [
   { label: 'SEM/EDX', link: '/sem-edx' },
   { label: 'Micro FT-IR', link: '/micro-ftir' },
   { label: 'Services', link: '/services' },
-  { label: 'Galleries', link: '/galleries' },
+  { label: 'Industries', link: '/industries' },
   { label: 'Contact', link: '/contact' },
 ] as const;
