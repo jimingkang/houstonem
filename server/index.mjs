@@ -13,6 +13,7 @@ import { createChatHandler } from './chat.mjs';
 import { customerOrders } from './orders.mjs';
 import { INQUIRY_EMAIL, submitServiceOrder } from './service-orders.mjs';
 import { reportUploadPath } from './admin-actions.mjs';
+import { orderFilesPath, uploadOrderFiles, sendOrderFile } from './order-files.mjs';
 import { serveAdmin } from './admin.mjs';
 import { createStaticHandler } from './static.mjs';
 const derive = promisify(scrypt);
@@ -58,7 +59,7 @@ export function createPortalServer(db = openDatabase(), options = {}) {
         const allowed = process.env.APP_ORIGIN ? [process.env.APP_ORIGIN] : [`http://${req.headers.host}`,`https://${req.headers.host}`];
         if (origin && !allowed.includes(origin)) return json(403,{error:'Invalid request origin.'});
         const media = req.headers['content-type']?.split(';')[0].trim().toLowerCase();
-        const requiredMedia = reportUploadPath.test(path) ? 'multipart/form-data' : 'application/json';
+        const requiredMedia = reportUploadPath.test(path) || orderFilesPath.test(path) ? 'multipart/form-data' : 'application/json';
         if (media !== requiredMedia) return json(415,{error:'Expected ' + requiredMedia + '.'});
       }
       const token = /(?:^|;\s*)hem_session=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie || '')?.[1];
@@ -88,6 +89,8 @@ export function createPortalServer(db = openDatabase(), options = {}) {
         return json(200,{ok:true});
       }
       if (path === '/api/portal' && req.method === 'GET') return json(200,{customer:asCustomer(user),orders:await customerOrders(db,user.id),subscriptions:await db.prepare('SELECT id,service,plan,status,renewal_date FROM subscriptions WHERE customer_id=?').all(user.id),reports:await db.prepare('SELECT id,title,sample_id,analysis,status,issued_at,filename FROM reports WHERE customer_id=? ORDER BY id DESC').all(user.id)});
+      if (orderFilesPath.test(path) && req.method === 'POST') return await uploadOrderFiles(req,json,db,user,path);
+      if (req.method === 'GET' && await sendOrderFile(res,json,db,path,user.id)) return;
       const match = /^\/api\/reports\/(\d+)\/download$/.exec(path);
       if (match && req.method === 'GET') {
         const report = await db.prepare("SELECT * FROM reports WHERE id=? AND customer_id=? AND status='Ready' AND content IS NOT NULL").get(Number(match[1]),user.id);

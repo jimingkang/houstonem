@@ -9,6 +9,7 @@ type Order = {
   id: string; customer_id: number; customer_name: string; status: string; created_at: string; subtotal_cents: number;
   shipping_name: string; shipping_email: string; shipping_address: string; notes: string;
   items: { sku: string; name: string; quantity: number; unit: string | null; price_cents: number }[];
+  files?: { id: number; filename: string; size: number; uploaded_by: string; created_at: string }[];
 };
 
 type CustomerProfile = {
@@ -110,6 +111,7 @@ type CustomerProfile = {
                   @if (order.shipping_address) { <div><dt>Shipping address</dt><dd>{{ order.shipping_address }}</dd></div> }
                   @if (order.notes) { <div><dt>Sample and order notes</dt><dd>{{ order.notes }}</dd></div> }</dl>
                   <h2>Items</h2><ul>@for (item of order.items; track $index) { <li>{{ item.name }} × {{ item.quantity }} @if (item.unit) { ({{ item.unit }}) } · {{ money(item.price_cents / 100) }} USD each</li> }</ul>
+                  <h2>Client files</h2>@if (order.files?.length) { <ul>@for (file of order.files; track file.id) { <li><a [href]="'/api/admin/orders/' + order.id + '/files/' + file.id" [attr.download]="file.filename">{{ file.filename }}</a> · {{ (file.size / 1024 / 1024).toFixed(1) }} MB · {{ file.uploaded_by === 'lab' ? 'lab' : 'client' }} · {{ file.created_at.slice(0, 10) }}</li> }</ul> } @else { <p>No files uploaded.</p> }
                   <ng-container [ngTemplateOutlet]="orderStatus" [ngTemplateOutletContext]="{ $implicit: order }"></ng-container>
                 </div>
               </details>

@@ -14,18 +14,27 @@ export const ORDER_SCHEMA = `CREATE TABLE IF NOT EXISTS products(
     CREATE TABLE IF NOT EXISTS service_order_items(
     order_id TEXT PRIMARY KEY REFERENCES orders(id),service_slug TEXT NOT NULL,name TEXT NOT NULL,
     quantity INTEGER NOT NULL CHECK(quantity>0),unit TEXT NOT NULL CHECK(unit IN ('sample','project')),price_cents INTEGER NOT NULL CHECK(price_cents>=0));
-    CREATE INDEX IF NOT EXISTS orders_customer ON orders(customer_id,created_at);`;
+    CREATE TABLE IF NOT EXISTS order_files(
+    id INTEGER PRIMARY KEY,order_id TEXT NOT NULL REFERENCES orders(id),uploaded_by TEXT NOT NULL CHECK(uploaded_by IN ('customer','lab')),
+    filename TEXT NOT NULL,mime TEXT NOT NULL,size INTEGER NOT NULL,content BLOB NOT NULL,created_at TEXT NOT NULL);
+    CREATE INDEX IF NOT EXISTS orders_customer ON orders(customer_id,created_at);
+    CREATE INDEX IF NOT EXISTS order_files_order ON order_files(order_id);`;
 export function initializeOrders(db) { db.exec(ORDER_SCHEMA); }
 // Customer-facing view: prices are negotiated by email, so the stored reference
 // estimates (subtotal_cents, price_cents) stay internal to the lab's admin tools,
 // which pass { internal: true }.
 export async function customerOrders(db, customerId, orderId = null, { internal = false } = {}) {
-  const select = `SELECT id,status,${internal ? 'subtotal_cents,currency,' : ''}created_at FROM orders WHERE customer_id=?`;
+  const select = `SELECT id,status,${internal ? 'subtotal_cents,currency,' : ''}notes,created_at FROM orders WHERE customer_id=?`;
   const orders = orderId === null ? await db.prepare(select + ' ORDER BY created_at DESC').all(customerId) : await db.prepare(select + ' AND id=?').all(customerId, orderId);
   return Promise.all(orders.map(async order => {
     const items = await orderItems(db, order.id);
-    return { ...order, items: internal ? items : items.map(({ price_cents, ...item }) => item) };
+    return { ...order, items: internal ? items : items.map(({ price_cents, ...item }) => item), files: await orderFiles(db, order.id) };
   }));
+}
+
+/** Metadata of the files attached to an order (sample photos, drawings, data sheets). */
+export function orderFiles(db, orderId) {
+  return db.prepare('SELECT id,filename,mime,size,uploaded_by,created_at FROM order_files WHERE order_id=? ORDER BY id').all(orderId);
 }
 
 export function orderItems(db, id) {

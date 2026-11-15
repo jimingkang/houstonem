@@ -1,5 +1,6 @@
 import { mutateAdmin } from './admin-actions.mjs';
-import { customerOrders, orderItems } from './orders.mjs';
+import { customerOrders, orderFiles, orderItems } from './orders.mjs';
+import { sendOrderFile } from './order-files.mjs';
 
 const PAGE_SIZE = 25;
 
@@ -34,6 +35,8 @@ export async function serveAdmin(req, res, json, db, user, url, asCustomer) {
     return res.end(Buffer.from(report.content));
   }
 
+  if (await sendOrderFile(res, json, db, url.pathname, null)) return;
+
   const params = url.searchParams;
   const requested = Number(params.get('page') || '1');
   const page = Number.isSafeInteger(requested) && requested > 0 ? Math.min(requested, 1_000_000) : 1;
@@ -65,7 +68,7 @@ export async function serveAdmin(req, res, json, db, user, url, asCustomer) {
       ORDER BY o.created_at DESC,o.id DESC LIMIT ? OFFSET ?`).all(...bindings, PAGE_SIZE, offset);
     return json(200, { orders: await Promise.all(orders.map(async order => {
       const { customer_name, customer_email, ...details } = order;
-      return { ...details, customer_name: asCustomer({ name: customer_name, email: customer_email }).name, items: await orderItems(db, order.id) };
+      return { ...details, customer_name: asCustomer({ name: customer_name, email: customer_email }).name, items: await orderItems(db, order.id), files: await orderFiles(db, order.id) };
     })), total, page, pageSize: PAGE_SIZE });
   }
 
