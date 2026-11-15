@@ -20,11 +20,19 @@ import { Micrograph } from '../data/site.data';
       <figcaption class="bar mono">
         <span class="cell logo" aria-hidden="true">HEM</span>
         @if (!compact()) {
-          <span class="cell"><b>HV</b>{{ image().hv }}</span>
-          <span class="cell"><b>det</b>{{ image().det }}</span>
-          <span class="cell wd"><b>WD</b>{{ image().wd }}</span>
+          @if (image().hv) {
+            <span class="cell"><b>HV</b>{{ image().hv }}</span>
+          }
+          @if (image().det) {
+            <span class="cell"><b>det</b>{{ image().det }}</span>
+          }
+          @if (image().wd) {
+            <span class="cell wd"><b>WD</b>{{ image().wd }}</span>
+          }
         }
-        <span class="cell"><b>mag</b>{{ image().mag }}</span>
+        @if (image().mag) {
+          <span class="cell"><b>mag</b>{{ image().mag }}</span>
+        }
         <span class="scale" aria-hidden="true"></span>
         <span class="sr-only">{{ image().alt }}</span>
       </figcaption>

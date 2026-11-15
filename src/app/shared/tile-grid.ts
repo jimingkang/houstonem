@@ -16,7 +16,9 @@ import { Tile } from '../data/site.data';
             </span>
             <span class="label">
               <span>{{ tile.label }}</span>
-              <span class="mono mag" aria-hidden="true">{{ tile.image.mag }}</span>
+              @if (tile.image.mag) {
+                <span class="mono mag" aria-hidden="true">{{ tile.image.mag }}</span>
+              }
             </span>
           </a>
         </li>
