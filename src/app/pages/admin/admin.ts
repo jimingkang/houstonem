@@ -4,7 +4,7 @@ import { FormsModule, NgForm } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { formatUsd } from '../../data/service-pricing';
 
-type Customer = { id: number; name: string; email: string; company: string; isAdmin: boolean; order_count: number };
+type Customer = { id: number; name: string; email: string; company: string; isAdmin: boolean; portalAccount: boolean; order_count: number };
 type Order = {
   id: string; customer_id: number; customer_name: string; status: string; created_at: string; subtotal_cents: number;
   shipping_name: string; shipping_email: string; shipping_address: string; notes: string;
@@ -49,7 +49,7 @@ type CustomerProfile = {
         @else if (profile(); as record) {
           <button class="text-link" type="button" (click)="switchTo('customers')">← All customers</button>
           <div class="card"><span class="eyebrow">Customer record · #{{ record.customer.id }}</span><h2>{{ record.customer.name }}</h2>
-            <p>{{ record.customer.email }} @if (record.customer.company) { · {{ record.customer.company }} }</p>
+            <p>{{ record.customer.portalAccount ? record.customer.email : 'Quote request only · no portal account' }} @if (record.customer.company) { · {{ record.customer.company }} }</p>
           </div>
           <div class="record-grid">
             <section class="card"><h2>Subscriptions ({{ record.subscriptions.length }})</h2>
@@ -98,7 +98,7 @@ type CustomerProfile = {
             <div class="table-scroll"><table>
               <thead><tr><th scope="col">Customer</th><th scope="col">Account email</th><th scope="col">Company</th><th scope="col">Type</th><th scope="col">Orders</th></tr></thead>
               <tbody>@for (customer of customers(); track customer.id) {
-                <tr><td><button type="button" class="text-link" (click)="openCustomer(customer)" [attr.aria-label]="'View customer record for ' + customer.name">{{ customer.name }}</button><small>#{{ customer.id }}</small></td><td>{{ customer.email }}</td><td>{{ customer.company || '—' }}</td><td>{{ customer.isAdmin ? 'Administrator' : 'Client' }}</td><td><button class="text-link" type="button" (click)="showOrders(customer)">{{ customer.order_count }} <span class="sr-only">orders for {{ customer.name }}</span>↗</button></td></tr>
+                <tr><td><button type="button" class="text-link" (click)="openCustomer(customer)" [attr.aria-label]="'View customer record for ' + customer.name">{{ customer.name }}</button><small>#{{ customer.id }}</small></td><td>{{ customer.portalAccount ? customer.email : 'No portal account' }}</td><td>{{ customer.company || '—' }}</td><td>{{ customer.isAdmin ? 'Administrator' : customer.portalAccount ? 'Client' : 'Quote contact' }}</td><td><button class="text-link" type="button" (click)="showOrders(customer)">{{ customer.order_count }} <span class="sr-only">orders for {{ customer.name }}</span>↗</button></td></tr>
               } @empty { <tr><td colspan="5">No matching customers.</td></tr> }</tbody>
             </table></div>
           } @else {

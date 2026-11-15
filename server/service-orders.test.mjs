@@ -61,7 +61,7 @@ test('service quote requests keep internal estimates, hide prices, preserve old 
     assert.equal((await post('/api/guest-session', {})).status, 401, 'guest accounts no longer exist');
 
     // A visitor without an account requests a quote; that creates their Client Portal account.
-    const newClient = { name: 'New Client', company: 'Client Co', password: 'client-password-123' };
+    const newClient = { name: 'New Client', company: 'Client Co', password: 'client-password-123', createAccount: true };
     assert.equal((await post('/api/service-orders', order())).status, 400, 'visitors must give a name and password');
     assert.equal((await post('/api/service-orders', { ...order(), ...newClient, password: 'short' })).status, 400);
     const taken = await post('/api/service-orders', { ...order(), ...newClient });
@@ -85,6 +85,23 @@ test('service quote requests keep internal estimates, hide prices, preserve old 
     assert.ok(!(await portal(cookie)).orders.some(o => o.id === guestOrderId));
     const guestCustomer = { id: signedUp.customer.id };
 
+    // Without "create an account" the request is filed under a contact that cannot sign in.
+    const inquiryBody = { ...order(), name: 'Walk In', company: '', email: 'buyer@example.com' };
+    assert.equal((await post('/api/service-orders', { ...inquiryBody, name: '' })).status, 400, 'a name is still required');
+    const inquiry = await post('/api/service-orders', inquiryBody);
+    assert.equal(inquiry.status, 201);
+    assert.equal(inquiry.headers.get('set-cookie'), null, 'no account means no session');
+    const inquiryResult = await inquiry.json();
+    assert.equal(inquiryResult.account, undefined);
+    const retriedInquiry = await post('/api/service-orders', inquiryBody);
+    assert.equal(retriedInquiry.status, 200, 'retrying the same request does not file it twice');
+    assert.equal((await retriedInquiry.json()).order.id, inquiryResult.order.id);
+    const contact = db.prepare('SELECT c.email,c.name FROM orders o JOIN customers c ON c.id=o.customer_id WHERE o.id=?').get(inquiryResult.order.id);
+    assert.match(contact.email, /^inquiry-[a-f0-9]{32}@inquiry\.invalid$/);
+    assert.equal(contact.name, 'Walk In');
+    assert.equal(db.prepare('SELECT shipping_email FROM orders WHERE id=?').get(inquiryResult.order.id).shipping_email, 'buyer@example.com');
+    assert.ok(!(await portal(cookie)).orders.some(o => o.id === inquiryResult.order.id), 'typing an email never exposes requests to that account');
+
     const adminGet = (resource, auth) => fetch(base + '/api/admin/' + resource, { headers: auth ? { Cookie: auth } : {} });
     for (const resource of ['customers', 'orders']) {
       assert.equal((await adminGet(resource)).status, 401);
@@ -93,13 +110,13 @@ test('service quote requests keep internal estimates, hide prices, preserve old 
     const admin = await signIn('admin@example.com', 'admin-password-123');
     assert.equal((await portal(admin)).customer.isAdmin, true);
     const customers = await (await adminGet('customers', admin)).json();
-    assert.equal(customers.total, 4);
+    assert.equal(customers.total, 5);
     assert.equal(customers.customers.find(c => c.id === guestCustomer.id).name, 'New Client');
     assert.equal(customers.customers.find(c => c.id === buyer).order_count, 2);
     assert.ok(customers.customers.every(c => !('password_hash' in c) && !('salt' in c)));
     assert.equal((await (await adminGet('customers?q=buyer%40example.com', admin)).json()).total, 1);
     const orders = await (await adminGet('orders', admin)).json();
-    assert.equal(orders.total, 3);
+    assert.equal(orders.total, 4);
     const guestRow = orders.orders.find(o => o.id === guestOrderId);
     assert.equal(guestRow.customer_name, 'New Client');
     assert.equal(guestRow.shipping_email, 'New.Client@Example.com');

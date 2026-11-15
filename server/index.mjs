@@ -11,14 +11,16 @@ import { addCustomer, openDatabase } from './db.mjs';
 import { seedLocalAdministrator, seedTestCustomer } from './seed-test.mjs';
 import { createChatHandler } from './chat.mjs';
 import { customerOrders } from './orders.mjs';
-import { submitServiceOrder } from './service-orders.mjs';
+import { INQUIRY_EMAIL, submitServiceOrder } from './service-orders.mjs';
 import { reportUploadPath } from './admin-actions.mjs';
 import { serveAdmin } from './admin.mjs';
 import { createStaticHandler } from './static.mjs';
 const derive = promisify(scrypt);
 const hash = value => createHash('sha256').update(value).digest('hex');
 function asCustomer(user) {
-  return { ...user, isAdmin: Boolean(user.isAdmin) };
+  // Contacts from quote requests sent without an account have a placeholder email and cannot sign in.
+  const inquiry = INQUIRY_EMAIL.test(user.email ?? '');
+  return { ...user, email: inquiry ? '' : user.email, portalAccount: !inquiry, isAdmin: !inquiry && Boolean(user.isAdmin) };
 }
 export function createPortalServer(db = openDatabase(), options = {}) {
   const chat = createChatHandler(options.chat);

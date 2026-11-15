@@ -96,7 +96,7 @@ export class ServiceOrderPage {
     if (this.busy() || !this.price()?.startingUsd || this.receipt()) return;
     const details = { service: this.slug(), quantity: this.quantity(), email: this.email.trim(), notes: this.notes.trim() };
     if (details.notes.length < 10 || details.notes.length > 1500 || details.quantity > MAX_QUOTE_SAMPLES) return;
-    const account = this.newVisitor() ? { name: this.name.trim(), company: this.company.trim(), password: this.password } : {};
+    const account = this.newVisitor() ? { name: this.name.trim(), company: this.company.trim(), password: this.password, createAccount: true } : {};
     if (this.newVisitor() && (!account.name || (account.password ?? '').length < 8)) return;
     const signature = JSON.stringify(details);
     if (this.request?.signature !== signature) this.request = { signature, id: crypto.randomUUID() };
