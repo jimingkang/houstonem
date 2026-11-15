@@ -246,7 +246,10 @@ import { BrandMark } from '../shared/brand-mark';
   `,
 })
 export class SiteHeader {
-  protected readonly nav = NAV;
+  // About, SEM/EDX and Micro FT-IR stay reachable from the footer and page links,
+  // but are left out of the header tabs.
+  private static readonly HIDDEN = new Set(['/about', '/sem-edx', '/micro-ftir']);
+  protected readonly nav = NAV.filter(item => !SiteHeader.HIDDEN.has(item.link));
   protected readonly contact = CONTACT;
   protected readonly open = signal(false);
 

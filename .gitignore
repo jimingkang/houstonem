@@ -19,3 +19,9 @@ server/data/
 
 # Angular build cache
 /.angular/cache/
+
+# Local source images and scratch files (not part of the site)
+/pics/
+/houstonem-images.zip
+/houstonem-images/
+/.claude-sheets/
