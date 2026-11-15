@@ -84,15 +84,15 @@ Hosted-provider keys are unused and have been removed from the local configurati
 
 Tests use mocked Ollama responses and need no installed model. They cover request format, conversation history, account isolation, validation, timeouts, missing models and rate limits.
 
-## Laboratory services and estimates
+## Laboratory services and quotes
 
-`/services` organizes the laboratory's catalog by testing category and supports keyword search. Each service detail includes sample guidance, expected deliverables and a proposed starting price in USD per sample or project. Rates are illustrative and centrally maintained in `src/app/data/service-pricing.ts`; verify them with the laboratory before publishing as approved prices. Gold sputtering is included when appropriate for an eligible SEM project.
+`/services` organizes the laboratory's catalog by testing category and supports keyword search. Each service detail includes sample guidance and expected deliverables. **Prices are not shown to customers**: the lab negotiates pricing by email, so every service shows a "Quote by email" call to action instead. Internal reference rates are still kept in `src/app/data/service-pricing.ts` (the `startingUsd` value also marks which services can be requested on their own; gold sputtering is included with eligible SEM work).
 
-Sample-based estimates multiply the proposed rate by the selected quantity. The quote link carries the service and quantity into the contact form, where the customer can add sample and project details and open an email draft for laboratory review. The site does not send the email or issue a binding quote automatically.
+The **Email us for a quote** button on a service detail opens an email draft to the lab with the service and quantity filled in. The contact form link carries the same details into the contact page.
 
-### Ordering a service
+### Online quote requests
 
-Open a service detail, set the sample quantity if applicable, and select **Order this service**. Checkout reuses an active client session or automatically creates a randomly named guest account. The customer supplies a real contact email and sample/testing notes. Guests can view their orders from the same browser for up to 30 days while their session cookie is present. Signing out or clearing that cookie ends guest access. The server calculates the estimate using the same catalog pricing as the frontend and records a price snapshot in SQLite. The order starts as **Awaiting lab confirmation** and appears under **My orders** in the Client Portal. The lab confirms the scope, quote and payment offline. No online payment or automatic email is sent. Project prices use a quantity of one; included SEM preparation is not a standalone order.
+Open a service detail, set the sample quantity if applicable, and select **Send a quote request online**. This reuses an active client session or automatically creates a randomly named guest account. The customer supplies a real contact email and sample/testing notes. Guests can view their requests from the same browser for up to 30 days while their session cookie is present. The server records the request in SQLite with an internal reference estimate from the catalog rates, for the lab's use only. The customer API and Client Portal never return prices. The request starts as **Awaiting lab confirmation** and appears under **My orders** in the Client Portal. The lab emails the quote, then confirms the scope and payment offline. No online payment or automatic email is sent.
 
 The `/shop` URL redirects to `/services`. Existing accessory orders remain visible for their owners and can still be managed; new accessory orders are no longer accepted. After updating the code, restart the server (`npm run dev` or `npm start`) so the service-order table is created in the existing database.
 

@@ -16,10 +16,12 @@ export function initializeOrders(db) {
     quantity INTEGER NOT NULL CHECK(quantity>0),unit TEXT NOT NULL CHECK(unit IN ('sample','project')),price_cents INTEGER NOT NULL CHECK(price_cents>=0));
     CREATE INDEX IF NOT EXISTS orders_customer ON orders(customer_id,created_at);`);
 }
+// Customer-facing view: prices are negotiated by email, so the stored reference
+// estimates (subtotal_cents, price_cents) stay internal to the lab's admin tools.
 export function customerOrders(db, customerId, orderId = null) {
-  const select = 'SELECT id,status,subtotal_cents,currency,created_at FROM orders WHERE customer_id=?';
+  const select = 'SELECT id,status,created_at FROM orders WHERE customer_id=?';
   const orders = orderId === null ? db.prepare(select + ' ORDER BY created_at DESC').all(customerId) : db.prepare(select + ' AND id=?').all(customerId, orderId);
-  return orders.map(order => ({ ...order, items: orderItems(db, order.id) }));
+  return orders.map(order => ({ ...order, items: orderItems(db, order.id).map(({ price_cents, ...item }) => item) }));
 }
 
 export function orderItems(db, id) {

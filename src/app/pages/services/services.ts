@@ -1,7 +1,7 @@
 import { Component, computed, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { SERVICES } from '../../data/site.data';
-import { SERVICE_CATEGORIES, SERVICE_PRICING, formatUsd } from '../../data/service-pricing';
+import { SERVICE_CATEGORIES, SERVICE_PRICING } from '../../data/service-pricing';
 
 @Component({
   selector: 'app-services-page',
@@ -12,7 +12,7 @@ import { SERVICE_CATEGORIES, SERVICE_PRICING, formatUsd } from '../../data/servi
         <div>
           <span class="eyebrow">Houston Electron Microscopy / Laboratory services</span>
           <h1>Find the right analysis for your sample.</h1>
-          <p>Browse testing by technique or material question. Compare what each service delivers and see starting estimates before requesting a quote.</p>
+          <p>Browse testing by technique or material question. Compare what each service delivers, then email the lab for a quote tailored to your samples.</p>
         </div>
         <a routerLink="/contact" class="btn btn-outline">Ask the lab for help <span aria-hidden="true">↗</span></a>
       </div>
@@ -35,7 +35,7 @@ import { SERVICE_CATEGORIES, SERVICE_PRICING, formatUsd } from '../../data/servi
         </aside>
         <div>
           <div class="results-head"><h2>{{ category() || 'All services' }}</h2><p role="status">{{ filtered().length }} {{ filtered().length === 1 ? 'service' : 'services' }}</p></div>
-          <p class="pricing-note">Illustrative starting estimates in USD. The lab confirms scope, sample preparation and final pricing before work begins.</p>
+          <p class="pricing-note">Pricing is quoted by email. Tell the lab about your samples and we will reply with scope, turnaround and a quote.</p>
           <div class="cards">
             @for (service of filtered(); track service.slug) {
               <article class="service-card">
@@ -45,8 +45,8 @@ import { SERVICE_CATEGORIES, SERVICE_PRICING, formatUsd } from '../../data/servi
                   <h3><a [routerLink]="['/services', service.slug]">{{ service.title }}</a></h3>
                   <p>{{ service.summary }}</p>
                   <div class="card-footer">
-                    <span class="price">@if (service.pricing.startingUsd !== null) { <strong>From {{ money(service.pricing.startingUsd) }}</strong><small>USD / {{ service.pricing.unit }}</small> } @else { <strong>Included if needed</strong><small>With eligible SEM analysis</small> }</span>
-                    <a [routerLink]="['/services', service.slug]" class="text-link" [attr.aria-label]="'View details and estimate for ' + service.title">View service ↗</a>
+                    <span class="price">@if (service.pricing.startingUsd !== null) { <strong>Quote by email</strong><small>Priced per project</small> } @else { <strong>Included if needed</strong><small>With eligible SEM analysis</small> }</span>
+                    <a [routerLink]="['/services', service.slug]" class="text-link" [attr.aria-label]="'View details and request a quote for ' + service.title">View service ↗</a>
                   </div>
                 </div>
               </article>
@@ -84,7 +84,6 @@ export class ServicesPage {
   protected readonly counts = Object.fromEntries(SERVICE_CATEGORIES.map(category => [category, this.services.filter(service => service.pricing.category === category).length]));
   protected readonly query = signal('');
   protected readonly category = signal('');
-  protected readonly money = formatUsd;
   protected readonly filtered = computed(() => {
     const terms = this.query().toLowerCase().trim().split(/\s+/).filter(Boolean);
     return this.services.filter(service => {
