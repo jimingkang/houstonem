@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
-import { SERVICE_PRICING, formatUsd, quoteSampleCount } from '../../data/service-pricing';
+import { SERVICE_PRICING, quoteSampleCount } from '../../data/service-pricing';
 import { ReactiveFormsModule, NonNullableFormBuilder, Validators } from '@angular/forms';
 import { CONTACT, SERVICES } from '../../data/site.data';
 import { PageHeader } from '../../shared/page-header';
@@ -61,8 +61,8 @@ import { PageHeader } from '../../shared/page-header';
             </select>
           </label>
 
-          @if (estimateText(); as estimate) {
-            <p class="muted estimate-note" role="status">{{ estimate }} Final pricing is subject to laboratory review.</p>
+          @if (scopeText(); as scope) {
+            <p class="muted estimate-note" role="status">{{ scope }}. We'll reply by email with a quote.</p>
           }
 
           <label class="field">
@@ -255,13 +255,12 @@ export class ContactPage {
     message: ['', [Validators.required, Validators.minLength(10)]],
   });
 
-  protected estimateText(): string | null {
+  protected scopeText(): string | null {
     if (!this.quotedService || this.quotedService.title !== this.selectedService()) return null;
     const price = SERVICE_PRICING[this.quotedService.slug];
     if (price.startingUsd === null) return null;
     const quantity = price.unit === 'sample' ? this.requestedSamples : 1;
-    const scope = price.unit === 'sample' ? `${quantity} ${quantity === 1 ? 'sample' : 'samples'}` : '1 project';
-    return `Illustrative starting estimate for ${scope}: ${formatUsd(price.startingUsd * quantity)} USD.`;
+    return `Quantity: ${price.unit === 'sample' ? `${quantity} ${quantity === 1 ? 'sample' : 'samples'}` : '1 project'}`;
   }
 
   protected invalid(name: 'name' | 'email' | 'message'): boolean {
@@ -282,7 +281,7 @@ export class ContactPage {
       `Email: ${v.email}`,
       v.phone ? `Phone: ${v.phone}` : null,
       v.service ? `Service: ${v.service}` : null,
-      this.estimateText(),
+      this.scopeText(),
       '',
       v.message,
     ]
