@@ -63,39 +63,39 @@ export const CONTACT = {
 } as const;
 
 /**
- * Every image here is Houston Electron Microscopy's own work, taken from houstonem.com
- * (source path noted beside each entry). Instrument data is only filled in where the
- * original caption states it.
+ * Every image here is Houston Electron Microscopy's own work: from the HEM Marketing
+ * "Website" folder on SharePoint/OneDrive, or from houstonem.com (source noted beside
+ * each entry). Instrument data is only filled in where the source states it.
  */
 const img = (src: string, alt: string, extra: Partial<Micrograph> = {}): Micrograph => ({
-  src: `/images/${src}.png`,
+  src: `/images/${src}.jpg`,
   alt,
   ...extra,
 });
 
 export const IMAGES = {
-  // houstonem.com/images/gallery1/5.jpg
-  hero: img('hero-colorsem', 'Ductile cast iron fracture surface with a color X-ray element map overlay'),
-  // houstonem.com/images/gallery1/6.jpg
-  metals: img('metals', 'SEM image of ductile dimples on a metal fracture surface'),
-  // houstonem.com/images/gallery4/4.jpg
-  polymers: img('polymers', 'SEM image of a PVC pipe coupling'),
-  // houstonem.com/images/liquids/liquid.jpg
-  liquids: img('liquids-oils', 'Oil sample in a glass container, prepared for filtration and analysis'),
-  // houstonem.com/images/gallery4/7.jpg
-  powders: img('powders', 'SEM image of salt and pepper grains with an EDS spectrum'),
+  // OneDrive: 00 Pictures/COLOR SEM-EDS at Houston EM.jpg
+  hero: img('hero-colorsem', 'ColorSEM image with a real-time EDS element map, taken at Houston Electron Microscopy'),
+  // OneDrive: Exotic Materials/938205-C Leading Edge 711-microns 20kX.jpg
+  metals: img('metals', 'SEM image of an exotic alloy microstructure at 20 000 x', { mag: '20 000 x' }),
+  // OneDrive: 00 Pictures/EXAMPLE PTFE Side 20kX - Copy.jpg
+  polymers: img('polymers', 'SEM image of a PTFE surface at 20 000 x', { mag: '20 000 x' }),
+  // OneDrive: Liquid & Oils/22-589 Liquid Residue 2000X-1.tif
+  liquids: img('liquids-oils', 'ColorSEM image of residue filtered from a liquid sample at 2 000 x', { mag: '2 000 x' }),
+  // OneDrive: 00 Pictures/24-331 Ni-Zr Powder-2 650X Zr-Co.tif
+  powders: img('powders', 'ColorSEM element map of a nickel-zirconium powder at 650 x', { mag: '650 x' }),
   // houstonem.com/images/coatings/coating-layers.jpg
   coatings: img('coatings', 'SEM cross-section of coating layers with thickness measurements'),
-  // houstonem.com/images/geological/core-SEM.jpg
-  core: img('core-samples', 'SEM image of a geological core sample'),
-  // houstonem.com/images/gallery1/2.jpg
-  failure: img('failure', 'SEM image of a weld fatigue fracture'),
+  // OneDrive: 00 Pictures/Sample of clay-like material ... 2000x a.tif
+  core: img('core-samples', 'ColorSEM element map of a clay-like mineral sample at 2 000 x', { mag: '2 000 x' }),
+  // OneDrive: 00 Pictures/NEW CUT C-5, Origin C-5 -IG-500X.jpg
+  failure: img('failure', 'SEM image of an intergranular fracture surface at 500 x', { mag: '500 x' }),
   // houstonem.com/images/gallery2/1.jpg
   corrosion: img('corrosion', 'SEM image of a corroded metal surface'),
-  // houstonem.com/images/powders/powder-analysis-1.jpg
-  particle: img('particle', 'Particle analysis image with particles color-coded by composition'),
-  // houstonem.com/images/polymers/spectra.jpg
-  ftir: img('ftir', 'Micro FT-IR spectrum used to identify an organic material', { det: 'FT-IR' }),
+  // OneDrive: 00 Pictures/165-23-00125-009 100X (23-367).jpg
+  particle: img('particle', 'Particle analysis image with particles color-coded by composition at 100 x', { mag: '100 x' }),
+  // OneDrive: 00 Pictures/FTIR photo for google business.jpg
+  ftir: img('ftir', 'Micro FT-IR chemical map, sample image and spectrum', { det: 'FT-IR' }),
   // houstonem.com/images/gallery6/4.jpg
   insect: img('insect', "SEM image of a mosquito's compound eyes"),
   // houstonem.com/images/gallery7/4.jpg
@@ -103,7 +103,7 @@ export const IMAGES = {
   // houstonem.com/images/eggShell/Egg-1000XW.jpg
   eggshell: img('eggshell', 'SEM image of a fractured chicken egg shell', { mag: '1 000 x' }),
   // houstonem.com/images/banner/ColorSEM-Remote-2.jpg (cropped)
-  lab: img('lab', 'The Houston Electron Microscopy laboratory'),
+  lab: img('lab', 'Thermo Scientific SEM workstation in the Houston Electron Microscopy laboratory'),
 };
 
 export const SERVICES: Service[] = [
@@ -339,32 +339,32 @@ export const GALLERY_CATEGORIES = [
 export const GALLERY: GalleryItem[] = [
   {
     category: 'Fracture Surfaces',
-    title: 'Weld fatigue',
-    description: 'Fatigue fracture surface from a failed weld.',
+    title: 'Intergranular fracture',
+    description: 'Grain facets exposed along the fracture origin, imaged at 500 x.',
     image: IMAGES.failure,
   },
   {
-    category: 'Fracture Surfaces',
-    title: 'Ductile dimples',
-    description: 'Microvoid coalescence dimples typical of ductile overload fracture.',
+    category: 'Phase Analysis',
+    title: 'Exotic alloy microstructure',
+    description: 'Fine cuboidal structure at the leading edge of an exotic alloy part, at 20 000 x.',
     image: IMAGES.metals,
   },
   {
     category: 'Non-Metallics',
-    title: 'PVC pipe coupling',
-    description: 'Surface of a PVC pipe coupling.',
+    title: 'PTFE surface',
+    description: 'Surface texture of PTFE at 20 000 x.',
     image: IMAGES.polymers,
   },
   {
-    category: 'Non-Metallics',
-    title: 'Salt and pepper',
-    description: 'Salt and pepper grains, with an EDS spectrum identifying the salt.',
+    category: 'Phase Analysis',
+    title: 'Nickel-zirconium powder',
+    description: 'ColorSEM element map separating the phases in a Ni-Zr powder, at 650 x.',
     image: IMAGES.powders,
   },
   {
     category: 'Phase Analysis',
     title: 'Particle analysis',
-    description: 'Particles segmented and color-coded by composition.',
+    description: 'Particles segmented and color-coded by composition, at 100 x.',
     image: IMAGES.particle,
   },
   {

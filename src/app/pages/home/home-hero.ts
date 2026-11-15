@@ -16,7 +16,7 @@ import { RouterLink } from '@angular/router';
           <div class="expert"><span class="expert-icon">✳</span><div>Real science. A real conversation.<small>Free consultation with our Ph.D. expert.</small></div></div>
         </div>
         <div class="visual">
-          <img src="/images/hero-colorsem.png" alt="ColorSEM micrograph revealing the elemental composition of a material" fetchpriority="high">
+          <img src="/images/hero-colorsem.jpg" alt="ColorSEM image with a real-time EDS element map, taken at Houston Electron Microscopy" fetchpriority="high">
           <span class="image-label"><i></i> A CLOSER LOOK CHANGES EVERYTHING</span>
           <div class="image-caption"><span>SEM / EDS<br><b>Clarity at the micron level.</b></span><a routerLink="/sem-edx" aria-label="Explore SEM and EDS analysis">↗</a></div>
           <span class="crosshair top">+</span><span class="crosshair bottom">+</span>
